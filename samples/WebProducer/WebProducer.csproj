@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <AsyncApiEnableAspNetCore>true</AsyncApiEnableAspNetCore>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj" />
+    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+  </ItemGroup>
+  <Import Project="../../src/StaticNorth.AsyncApi.Generator/Hosting/StaticNorth.AsyncApi.Generator.targets" />
+</Project>

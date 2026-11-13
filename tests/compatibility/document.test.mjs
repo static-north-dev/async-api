@@ -6,11 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { Parser } from '@asyncapi/parser';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
+const configuration = process.env.ASYNCAPI_TEST_CONFIGURATION ?? 'Debug';
 const parser = new Parser();
 
 function exportDocument() {
     return execFileSync('dotnet', [
-        'run', '--no-build', '--project', 'samples/Producer', '--', 'export',
+        'run', '--no-build', '--configuration', configuration, '--project', 'samples/Producer', '--', 'export',
     ], { cwd: root, encoding: 'utf8' });
 }
 

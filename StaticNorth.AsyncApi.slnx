@@ -1,7 +1,9 @@
 <Solution>
   <Folder Name="/samples/">
     <Project Path="samples/Consumer/Consumer.csproj" />
+    <Project Path="samples/FetchContract/FetchContract.csproj" />
     <Project Path="samples/Producer/Producer.csproj" />
+    <Project Path="samples/WebProducer/WebProducer.csproj" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/StaticNorth.AsyncApi.Client/StaticNorth.AsyncApi.Client.csproj" />

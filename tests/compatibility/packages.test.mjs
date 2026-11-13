@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
+const configuration = process.env.ASYNCAPI_TEST_CONFIGURATION ?? 'Debug';
 const prefix = 'StaticNorth.AsyncApi.';
 const analyzer = `analyzers/dotnet/cs/${prefix}Generator.Analyzers.dll`;
 
@@ -102,13 +103,13 @@ internal sealed class SmokeDefinition : IAsyncApiMessageDefinition<string>
     writeFileSync(join(directory, 'Program.cs'), source);
 
     if (clientOnly || combined) {
-        const json = dotnet(root, 'run', '--no-build', '--project', 'samples/Producer', '--', 'export');
+        const json = dotnet(root, 'run', '--no-build', '--configuration', configuration, '--project', 'samples/Producer', '--', 'export');
         const contract = JSON.parse(json);
         contract.operations.acceptOrder = {
             action: 'receive', channel: { $ref: clientOnly ? 'external.json#/channels/orders' : '#/channels/orders' },
         };
         writeFileSync(join(directory, 'orders.asyncapi.json'), JSON.stringify(contract));
-        const payload = dotnet(root, 'run', '--no-build', '--project', 'samples/Producer', '--', 'payload');
+        const payload = dotnet(root, 'run', '--no-build', '--configuration', configuration, '--project', 'samples/Producer', '--', 'payload');
         writeFileSync(join(directory, 'order-created.json'), payload);
     }
     dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
@@ -148,6 +149,24 @@ internal sealed class SmokeDefinition : IAsyncApiMessageDefinition<string>
         const output = dotnet(directory, 'bin/Debug/net11.0/Smoke.dll');
         const document = JSON.parse(output);
         assert.equal(document.components.messages.smoke.name, 'smoke');
+        const runtimeConfig = JSON.parse(readFileSync(join(directory, 'bin/Debug/net11.0/Smoke.runtimeconfig.json'), 'utf8'));
+        assert.equal(runtimeConfig.runtimeOptions.framework.name, 'Microsoft.NETCore.App');
+
+        const webProject = readFileSync(join(directory, project), 'utf8')
+            .replace('Microsoft.NET.Sdk', 'Microsoft.NET.Sdk.Web')
+            .replace('<Nullable>enable</Nullable>', '<Nullable>enable</Nullable><AsyncApiEnableAspNetCore>true</AsyncApiEnableAspNetCore>');
+        writeFileSync(join(directory, project), webProject);
+        writeFileSync(join(directory, 'Program.cs'), `
+using Microsoft.AspNetCore.Builder;
+using StaticNorth.AsyncApi.Generator;
+
+var host = WebApplication.CreateBuilder(args);
+host.Services.AddAsyncApi(_ => new AsyncApiDocumentBuilder(info => info.Info("Packed", "1.0.0")));
+var app = host.Build();
+app.MapAsyncApi().RequireAuthorization("InternalApi");
+`);
+        dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
+        dotnet(directory, 'build', project, '--no-restore', '--disable-build-servers');
     }
 
     if (clientOnly || combined) {
@@ -163,7 +182,7 @@ test('The producer and client packages share one compiler analyzer', () => {
     const cache = join(directory, 'packages');
 
     try {
-        dotnet(root, 'pack', 'StaticNorth.AsyncApi.slnx', '--configuration', 'Debug', '--no-build', '--no-restore',
+        dotnet(root, 'pack', 'StaticNorth.AsyncApi.slnx', '--configuration', configuration, '--no-build', '--no-restore',
             '--disable-build-servers', '-m:1', '--output', feed);
         const packages = readdirSync(feed).sort();
         const version = packages.find(name => name.startsWith(`${prefix}Core.`))

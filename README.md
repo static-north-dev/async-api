@@ -49,4 +49,31 @@ Pass an `IAsyncApiTransport` implementation to the generated client. For example
 
 Use `InMemoryAsyncApiTransport` for local examples and tests. It matches the channel address and message key using ordinal comparison and awaits the matching handlers. Producer code can publish an `AsyncApiEnvelope` containing UTF-8 JSON bytes, an explicit route, headers, and a correlation ID. The generated subscriber deserializes the bytes before calling the handler. See the [transport contract](docs/architecture.md#transport-boundary) for lifetime and error behavior.
 
+## Serve a contract from ASP.NET Core
+
+In the host project, reference `StaticNorth.AsyncApi.Generator` and set `<AsyncApiEnableAspNetCore>true</AsyncApiEnableAspNetCore>`. Register a document builder with `builder.Services.AddAsyncApi(...)`, then map the endpoint with the host's authorization policy.
+
+```csharp
+app
+    .MapAsyncApi("/asyncapi.json")
+    .RequireAuthorization("InternalApi");
+```
+
+The [web sample](samples/WebProducer/Program.cs) shows generated definition registration and native ASP.NET Core authentication. It reads its demonstration bearer token from `ASYNCAPI_SPEC_TOKEN` and supports a custom route through `AsyncApi__Path`. The endpoint builds the document per request, responds with `application/json` and `Cache-Control: no-store`, and returns a generic 500 problem response for invalid document configuration.
+
+## Acquire a remote contract
+
+Run the fetch sample explicitly before building a client. Add the resulting local file to `AdditionalFiles`.
+
+```sh
+dotnet run --project samples/FetchContract -- refresh https://example.com/asyncapi.json orders.asyncapi.json
+dotnet run --project samples/FetchContract -- offline orders.asyncapi.json "$ASYNCAPI_SHA256"
+```
+
+Supply a trusted SHA-256 checksum as the optional last argument to `refresh` to pin downloaded bytes. Offline mode requires that checksum and reads only the local file. Use `ASYNCAPI_SPEC_TOKEN` from your credential source for the sample bearer provider, or implement `ISpecificationAuthenticationProvider` in your own fetch host. Authenticated downloads require HTTPS. Failed refreshes leave the previous file intact. The fetcher validates the supported document version, root structure, and inline operation actions. Run the official AsyncAPI parser when you need full contract validation.
+
+## Build release packages
+
+CI verifies the solution and uploads the three Release NuGet packages. To prepare for publishing, configure the GitHub `nuget` environment with deployment protection and its `NUGET_USER` secret. Create a NuGet Trusted Publishing policy for `static-north-dev/async-api`, workflow file `release.yml`, and environment `nuget`. Set the intended version in `Directory.Build.props`, then dispatch the **Publish NuGet packages** workflow from the default branch. [NuGet Trusted Publishing setup](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+
 [Architecture decision](docs/architecture.md) · [Standards coverage and limits](docs/standards-coverage.md) · [Changelog](CHANGELOG.md) · [Apache-2.0 license](LICENSE)

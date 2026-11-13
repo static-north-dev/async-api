@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M5 developer experience
+
+- Added opt-in ASP.NET Core document hosting with host authorization.
+- Added explicit remote contract acquisition with pluggable authentication and offline SHA-256 verification.
+- Added Release NuGet artifacts in CI and a manually dispatched Trusted Publishing workflow.
+
 ## Unreleased — M4 transport
 
 - Added the transport interface, message route, and envelope in Core.

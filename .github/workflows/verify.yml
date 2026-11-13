@@ -1,6 +1,7 @@
 name: Verify
 
 on:
+  workflow_call:
   pull_request:
   push:
     branches: [develop, main]
@@ -12,6 +13,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      ASYNCAPI_TEST_CONFIGURATION: Release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -22,8 +25,14 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-      - run: dotnet build StaticNorth.AsyncApi.slnx
+      - run: dotnet build StaticNorth.AsyncApi.slnx --configuration Release
       - run: dotnet format StaticNorth.AsyncApi.slnx --verify-no-changes --no-restore
-      - run: dotnet test --solution StaticNorth.AsyncApi.slnx --no-build --no-restore
+      - run: dotnet test --solution StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore
       - run: npm --prefix tests/compatibility ci --ignore-scripts
       - run: npm --prefix tests/compatibility test
+      - run: dotnet pack StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore --output artifacts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nuget-packages
+          path: artifacts/*.nupkg
+          if-no-files-found: error

@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="StaticNorth.AsyncApi.Client.Tests" />
     <None Update="Build/StaticNorth.AsyncApi.Client.props" Pack="true" PackagePath="buildTransitive/StaticNorth.AsyncApi.Client.props" />
   </ItemGroup>
 </Project>

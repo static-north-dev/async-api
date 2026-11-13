@@ -1,6 +1,6 @@
 # ADR 0001 — AsyncAPI document generation and export
 
-Accepted through M4.
+Accepted through M5.
 
 ## Packages and compatibility
 
@@ -39,13 +39,15 @@ Schema inference uses the .NET JSON Schema exporter. Defaults use camel case and
 
 An application can write `AsyncApiJson.Write(builder.Build())` to a file or stream. An explicit export command in the compiled host calls that same API in a separate process. Compilation performs discovery and registration generation only. An explicit export host is sufficient for M2. A reusable CLI remains a later developer experience decision.
 
-An ASP.NET Core host can opt in to `MapAsyncApi`, with `/asyncapi.json` as the default route. Its implementation must preserve the worker and console dependency graph, for example through opt-in build integration for web hosts. It returns the native endpoint convention builder so the host can apply its existing authorization policies.
+Setting `AsyncApiEnableAspNetCore` in a host project compiles the Generator package's endpoint extensions into that host. `AddAsyncApi` registers a scoped builder factory. `MapAsyncApi` maps `/asyncapi.json` by default and returns the native endpoint convention builder for host authorization and other metadata. Each request builds a fresh snapshot. The response disables caching and reports document configuration errors as a generic 500 problem response.
 
 ## Consumer boundary
 
 The Client generator reads local `*.asyncapi.json` documents from `AdditionalFiles`. The Generator project's compiler target runs in the .NET 11 SDK host and uses its `System.Text.Json` runtime. The Client package exposes compiler-visible metadata for per-file settings. It supplies the same analyzer as the Generator package, and the analyzer loads once when both packages are present.
 
 A documented `send` produces a subscriber contract with a `ValueTask<IAsyncDisposable>` subscription handle. A documented `receive` produces a publisher contract with a `ValueTask` method. Each method takes an optional cancellation token. Operation metadata preserves the original AsyncAPI routing keys and binding JSON. When Client is referenced, the generator also emits concrete implementations that delegate to the supplied transport.
+
+`SpecificationFetcher` runs in an explicit host before compilation. Refresh downloads up to 4 MiB, checks structure and any supplied checksum, and replaces the local file after validation. The authentication provider can set request headers for the original HTTPS destination. Redirects fail the refresh. Offline mode verifies the local file against a required SHA-256 checksum. Refresh always requests a fresh response. Conditional requests and automatic cache fallback are deferred.
 
 `SNA2001` identifies invalid documents, `SNA2002` identifies unsupported constructs, and `SNA2003` identifies conflicts between generated or existing symbols. Diagnostics identify the input file and include the relevant JSON path for contract errors.
 

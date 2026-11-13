@@ -1,0 +1,7 @@
+<Project>
+  <ItemGroup Condition="'$(AsyncApiEnableAspNetCore)' == 'true'">
+    <FrameworkReference Include="Microsoft.AspNetCore.App" Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'" />
+    <Compile Include="$(MSBuildThisFileDirectory)AsyncApiEndpointExtensions.cs"
+             Link="AsyncApiEndpointExtensions.cs" />
+  </ItemGroup>
+</Project>

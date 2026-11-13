@@ -25,7 +25,13 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
     <Compile Remove="SourceGeneration/**/*.cs" />
+    <Compile Remove="Hosting/**/*.cs" />
     <ProjectReference Include="../StaticNorth.AsyncApi.Core/StaticNorth.AsyncApi.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Hosting/AsyncApiEndpointExtensions.cs" Pack="true" PackagePath="buildTransitive/AsyncApiEndpointExtensions.cs" />
+    <None Include="Hosting/StaticNorth.AsyncApi.Generator.targets" Pack="true" PackagePath="buildTransitive/StaticNorth.AsyncApi.Generator.targets" />
   </ItemGroup>
 
   <Target Name="PackAnalyzer" Condition="'$(TargetFramework)' == 'netstandard2.0'">
