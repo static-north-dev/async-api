@@ -1,0 +1,4 @@
+address: orders.eu
+messages:
+  orderCreated:
+    $ref: ../messages/orders.yaml#/created

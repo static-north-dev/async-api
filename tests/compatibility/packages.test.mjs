@@ -10,9 +10,50 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const configuration = process.env.ASYNCAPI_TEST_CONFIGURATION ?? 'Debug';
 const prefix = 'StaticNorth.AsyncApi.';
 const analyzer = `analyzers/dotnet/cs/${prefix}Generator.Analyzers.dll`;
+const bundleCli = fileURLToPath(new URL('../../tools/bundle-contract/cli.mjs', import.meta.url));
+const bundlingFixture = fileURLToPath(new URL('fixtures/bundling/', import.meta.url));
 
 function dotnet(cwd, ...args) {
     return execFileSync('dotnet', args, { cwd, encoding: 'utf8' });
+}
+
+function verifyBundledClient(directory, feed, cache, version) {
+    mkdirSync(directory);
+    const project = 'Bundled.csproj';
+    const bundled = join(directory, 'bundled.asyncapi.json');
+    const single = join(bundlingFixture, 'single', 'orders.asyncapi.json');
+    execFileSync(process.execPath, [bundleCli, join(bundlingFixture, 'split', 'orders.asyncapi.yaml'), bundled]);
+    writeFileSync(join(directory, project), `
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="${prefix}Client" Version="${version}" />
+    <AdditionalFiles Include="orders.asyncapi.json" AsyncApiNamespace="Conformance.Orders" />
+  </ItemGroup>
+</Project>
+`);
+    dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
+    const generated = join(directory, 'obj', configuration, 'net11.0', 'generated');
+    const outputs = [bundled, single].map(contract => {
+        writeFileSync(join(directory, 'orders.asyncapi.json'), readFileSync(contract));
+        rmSync(generated, { recursive: true, force: true });
+        dotnet(directory, 'build', project, '--configuration', configuration, '--no-restore', '--disable-build-servers', '--no-incremental');
+        const files = readdirSync(generated, { recursive: true }).filter(path => path.endsWith('.cs')).sort();
+        assert.equal(files.length, 1);
+        return files.map(path => readFileSync(join(generated, path)));
+    });
+
+    const source = outputs[0][0].toString('utf8');
+    assert.match(source, /class PublishOrderSubscriber/);
+    assert.match(source, /class AcceptOrderPublisher/);
+    assert.match(source, /class OrderCreated\b/);
+    assert.match(source, /OrderCreated\? Next/);
+    assert.deepEqual(outputs[0], outputs[1]);
 }
 
 function verifyConsumer(directory, feed, cache, version, references) {
@@ -188,7 +229,7 @@ if (ReferenceEquals(before, after) || !ReferenceEquals(after, snapshot.GetRespon
     }
 }
 
-test('The producer and client packages share one compiler analyzer', () => {
+test('The producer and client packages share one compiler analyzer', async t => {
     const directory = mkdtempSync(join(tmpdir(), 'asyncapi-pack-'));
     const feed = join(directory, 'feed');
     const cache = join(directory, 'packages');
@@ -206,6 +247,9 @@ test('The producer and client packages share one compiler analyzer', () => {
         verifyConsumer(join(directory, 'producer'), feed, cache, version, ['Generator']);
         verifyConsumer(join(directory, 'client'), feed, cache, version, ['Client']);
         verifyConsumer(join(directory, 'combined'), feed, cache, version, ['Client', 'Generator']);
+        await t.test('Split and single-file contracts emit identical C#', () => {
+            verifyBundledClient(join(directory, 'bundled'), feed, cache, version);
+        });
     } finally {
         rmSync(directory, { recursive: true, force: true });
     }

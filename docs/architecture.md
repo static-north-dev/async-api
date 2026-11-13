@@ -10,7 +10,7 @@ The Generator project also builds a `netstandard2.0` target for compiler hosts. 
 
 The first wire format is AsyncAPI 3.1.0 JSON. Its version is independent of both the package version and the API's `info.version`. Core models document sections independently of producer builders and client generation. The reader accepts exactly 3.1.0 and retains section contents as JSON for fidelity. The writer orders object properties by ordinal name, keeps array order and preserves numeric token spelling. Producer inference emits AsyncAPI Schema Objects, with explicit schema overrides for advanced contracts.
 
-The [AsyncAPI 3.1.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.1.0) and [tooling release notes](https://www.asyncapi.com/blog/release-notes-3.1.0) govern compatibility. Compatibility tests use the official JavaScript parser pinned to 3.6.6 with `@asyncapi/specs` 6.11.1. Node and the parser are test tooling.
+The [AsyncAPI 3.1.0 specification](https://www.asyncapi.com/docs/reference/specification/v3.1.0) and [tooling release notes](https://www.asyncapi.com/blog/release-notes-3.1.0) govern compatibility. Compatibility tests use the official JavaScript parser pinned to 3.6.6 with `@asyncapi/specs` 6.11.1. Node is used for contract preparation and compatibility tests.
 
 ## Producer API for M2
 
@@ -52,6 +52,8 @@ The public viewer shell contains the named JSON endpoint's path and loads its sc
 ## Consumer boundary
 
 The Client generator reads local `*.asyncapi.json` documents from `AdditionalFiles`. The Generator project's compiler target runs in the .NET 11 SDK host and uses its `System.Text.Json` runtime. The Client package exposes compiler-visible metadata for per-file settings. It supplies the same analyzer as the Generator package, and the analyzer loads once when both packages are present.
+
+The standalone [bundler](../tools/bundle-contract/cli.mjs) prepares YAML and JSON contracts before compilation. It keeps named root and component slots and stores other referenced definitions under the reserved `x-staticnorth-bundled` extension. It uses JSON Pointers and file-relative resolution, with no network access or JSON Schema `$id` and anchor resolution. Bundling leaves examples, extensions, and non-AsyncAPI schema bodies as data. Compatibility tests run the official parser on both the split fixture's bundle and its single-file equivalent, then compile both with the packed client analyzer and compare the emitted source bytes.
 
 A documented `send` produces a subscriber contract with a `ValueTask<IAsyncDisposable>` subscription handle. A documented `receive` produces a publisher contract with a `ValueTask` method. Each method takes an optional cancellation token. Operation metadata preserves the original AsyncAPI routing keys and binding JSON. When Client is referenced, the generator also emits concrete implementations that delegate to the supplied transport.
 

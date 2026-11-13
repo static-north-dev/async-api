@@ -4,11 +4,12 @@ A transport-agnostic AsyncAPI toolchain for .NET. Annotate C# definitions and bu
 
 ## Build and verify
 
-Use .NET SDK 11.0.100 and Node.js 24 or newer for the compatibility tests. Run these commands from the repository root.
+Use .NET SDK 11.0.100 and Node.js 24 or newer for bundling and the compatibility tests. Run these commands from the repository root.
 
 ```sh
 dotnet build StaticNorth.AsyncApi.slnx
 dotnet test --solution StaticNorth.AsyncApi.slnx --no-build --no-restore
+npm --prefix tools/bundle-contract ci --ignore-scripts
 npm --prefix tests/compatibility ci --ignore-scripts
 npm --prefix tests/compatibility test
 ```
@@ -42,6 +43,19 @@ For the Orders contract, `Orders.Contracts` contains `OrderCreated`, `IPublishOr
 Omit `AsyncApiNamespace` to generate under `AsyncApi.Generated.<document name>`. `AsyncApiAlias` replaces the filename in that default namespace. `AsyncApiModelPrefix` prefixes generated DTO names. `AsyncApiGenerate` accepts `both` (the default), `publishers`, or `subscribers`.
 
 Run the checked-in example with `dotnet run --no-build --project samples/Consumer`. To use your own producer document, export it to a local file and use that file in `AdditionalFiles`. The generator supports AsyncAPI 3.1.0 JSON and local JSON Pointers. See the [client coverage and limits](docs/standards-coverage.md) for supported payloads and diagnostics.
+
+## Bundle YAML and split contracts
+
+Run the bundler explicitly before building a client. It reads an AsyncAPI 3.1.0 YAML or JSON root and resolves relative `$ref` values to JSON or YAML files within the root file's directory tree. Reference paths are relative to the file containing them. The output is deterministic JSON, and recursive schemas stay linked by local JSON Pointers.
+
+```sh
+npm --prefix tools/bundle-contract ci --ignore-scripts
+node tools/bundle-contract/cli.mjs \
+  tests/compatibility/fixtures/bundling/split/orders.asyncapi.yaml \
+  /tmp/orders.asyncapi.json
+```
+
+Use the resulting `*.asyncapi.json` as your `AdditionalFiles` input. Bundling runs offline and leaves the previous output in place if it fails. Declare channels in the root `channels` map so operation links can point to them, even if their definitions live in separate files. HTTP(S) references and references inside non-AsyncAPI schema formats are outside this tool's scope. Use the official parser to validate the bundled contract.
 
 ## Connect a generated client to a transport
 

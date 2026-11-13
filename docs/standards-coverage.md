@@ -10,7 +10,8 @@ M4 adds in-process delivery through generated clients to the AsyncAPI 3.1.0 prod
 | Payload Schema Object and local `$ref` | Preserved as JSON | Inferred schema or explicit override | Requiredness, nullability, wire names, enums, collections and recursive objects | Objects, arrays, typed dictionaries, scalar types, string enums, nullable types and recursive object references | Official parser, generated compilation, invalid schemas and Orders round trip | Complex unions, boolean schemas and unsupported shape-changing keywords emit diagnostics |
 | Extensions, security schemes and protocol bindings | Preserved as JSON | Extension methods and explicit JSON objects | — | Raw channel, operation and message bindings | Round-trip fixture and binding metadata compilation | Protocol semantics and security execution are deferred |
 | Deterministic JSON | Ordinal object-key order, original array order and number spelling | — | — | — | Exact bytes, repeat serialization, duplicate member rejection | Whitespace and string escapes are normalized |
-| Other AsyncAPI versions, YAML and external references | Deferred | Deferred | — | Deferred | Unsupported version fixture | Core handles JSON and never resolves references |
+| YAML and external file references | UTF-8 JSON after bundling | — | — | Consumes the bundled JSON | Deterministic output, official parser on both fixtures, identical generated C# | Explicit offline command for local YAML/JSON and JSON Pointers. HTTP(S) and references within non-AsyncAPI schema bodies are outside its scope. |
+| Other AsyncAPI versions | Deferred | Deferred | — | Deferred | Unsupported version fixture | Exact 3.1.0 |
 
 The Core reader checks the version, required metadata, section shapes and duplicate members. Producer builds also validate the references they create. Run an official parser on documents that use explicit JSON schemas, bindings, or other authored fields to check the entire document.
 

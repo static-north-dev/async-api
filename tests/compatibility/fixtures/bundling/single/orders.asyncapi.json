@@ -1,0 +1,51 @@
+{
+  "asyncapi": "3.1.0",
+  "info": { "title": "Split orders", "version": "1.0.0" },
+  "defaultContentType": "application/json",
+  "channels": {
+    "orders": {
+      "address": "orders.eu",
+      "messages": {
+        "orderCreated": { "$ref": "#/components/messages/OrderCreated" }
+      }
+    }
+  },
+  "operations": {
+    "publishOrder": {
+      "action": "send",
+      "channel": { "$ref": "#/channels/orders" },
+      "messages": [{ "$ref": "#/channels/orders/messages/orderCreated" }]
+    },
+    "acceptOrder": {
+      "action": "receive",
+      "channel": { "$ref": "#/channels/orders" },
+      "messages": [{ "$ref": "#/channels/orders/messages/orderCreated" }]
+    }
+  },
+  "components": {
+    "messages": {
+      "OrderCreated": {
+        "name": "OrderCreated",
+        "payload": { "$ref": "#/components/schemas/OrderCreated" }
+      }
+    },
+    "schemas": {
+      "OrderCreated": {
+        "type": "object",
+        "required": ["order_id", "detail"],
+        "properties": {
+          "order_id": { "type": "string", "format": "uuid" },
+          "detail": { "$ref": "#/components/schemas/OrderDetail" },
+          "next": { "$ref": "#/components/schemas/OrderCreated" },
+          "previousDetail": { "$ref": "#/components/schemas/OrderDetail" }
+        }
+      },
+      "OrderDetail": {
+        "type": "object",
+        "required": ["sku"],
+        "properties": { "sku": { "type": "string" } }
+      }
+    }
+  },
+  "x-release-track": "test"
+}

@@ -17,6 +17,7 @@ The first prerelease targets .NET 11 and AsyncAPI 3.1.0 JSON. It includes the `S
 ### Client generation (M3)
 
 - Generate DTOs, typed publisher and subscriber interfaces, and binding metadata from a local AsyncAPI 3.1.0 JSON document. Configure namespace, alias, model prefix, and operation direction per input file.
+- Bundle YAML and JSON contracts with local external references into deterministic JSON before compilation.
 - Compiler diagnostics identify malformed documents, unsupported schemas, and generated symbol conflicts.
 
 ### Transport (M4)

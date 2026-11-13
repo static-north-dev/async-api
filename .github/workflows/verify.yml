@@ -30,6 +30,7 @@ jobs:
         env:
           Configuration: Release
       - run: dotnet test --solution StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore
+      - run: npm --prefix tools/bundle-contract ci --ignore-scripts
       - run: npm --prefix tests/compatibility ci --ignore-scripts
       - run: npm --prefix tests/compatibility test
       - run: npm --prefix samples/WebProducer/Viewer ci --ignore-scripts

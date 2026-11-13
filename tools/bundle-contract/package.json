@@ -1,0 +1,8 @@
+{
+  "name": "staticnorth-asyncapi-bundle-contract",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "js-yaml": "4.3.2"
+  }
+}
