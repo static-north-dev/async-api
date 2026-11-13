@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Core/StaticNorth.AsyncApi.Core.csproj" />
+    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
                       SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>

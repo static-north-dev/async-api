@@ -1,6 +1,6 @@
 # StaticNorth.AsyncApi
 
-A transport-agnostic AsyncAPI toolchain for .NET. M1 lays out the Core, Generator, and Client NuGet packages and adds a deterministic AsyncAPI 3.1.0 JSON codec. The Generator project contains both Roslyn scaffolds. Definition discovery, typed document authoring, and client code generation are future milestones.
+A transport-agnostic AsyncAPI toolchain for .NET. Annotate C# definitions and build an AsyncAPI 3.1.0 document at runtime. The Core, Generator, and Client projects share one compiler analyzer. Client code generation is planned for M3.
 
 ## Build and verify
 
@@ -13,15 +13,16 @@ npm --prefix tests/compatibility ci --ignore-scripts
 npm --prefix tests/compatibility test
 ```
 
-The solution builds both console samples. The compatibility suite checks Core's JSON output with the official parser and packs the three NuGet packages. It verifies that producer, client, and combined applications each resolve the shared analyzer once.
+The solution builds both console samples. The compatibility suite validates the exported producer document with the official AsyncAPI parser. It also builds and runs producer apps from the packed NuGets and checks that producer, client, and combined apps each resolve the shared analyzer once.
 
-## Try the M1 samples
+## Export an AsyncAPI document
 
 ```sh
-dotnet run --no-build --project samples/Producer -- samples/Contracts/orders.asyncapi.json
-dotnet run --no-build --project samples/Consumer
+dotnet run --no-build --project samples/Producer -- export > /tmp/orders.asyncapi.json
 ```
 
-The first command round-trips the bundled contract to standard output. The second builds with the same local contract as an `AdditionalFiles` item and prints the supported version.
+In your application, reference `StaticNorth.AsyncApi.Generator` and implement a marked definition class for each message, channel, or operation. The [Orders sample](samples/Producer/OrderCreatedDefinition.cs) declares an `OrderCreated` message, links it to a channel, and declares a `send` operation. `AsyncApiDefinitions.Register(builder)` registers the discovered definitions. Call `Build()` to execute their `Configure` methods and `AsyncApiJson.Write(document)` to export UTF-8 JSON. Use explicit factory registration for definitions that need injected services.
+
+The builder infers payload schemas from `System.Text.Json` metadata. Use `PayloadSchema` when the wire format depends on custom serialization. The [standards matrix](docs/standards-coverage.md) tracks the tested surface and its limits.
 
 [Architecture decision](docs/architecture.md) · [Standards coverage and limits](docs/standards-coverage.md) · [Changelog](CHANGELOG.md) · [Apache-2.0 license](LICENSE)

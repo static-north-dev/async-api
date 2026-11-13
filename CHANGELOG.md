@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M2 producer
+
+- Added annotated message, channel, and operation definitions with generated registration.
+- Added runtime document builders, reference validation, and payload schema inference from `System.Text.Json`.
+- Added an Orders export example with official parser and packed NuGet verification.
+
 ## 0.1.0-alpha.1 — M1 foundations
 
 - Pinned the .NET 11.0.100 SDK and adopted Larder's C# formatting and build conventions.

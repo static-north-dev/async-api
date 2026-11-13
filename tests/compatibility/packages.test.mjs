@@ -32,8 +32,25 @@ ${packageReferences.join('\n')}
   </ItemGroup>
 </Project>
 `);
-    writeFileSync(join(directory, 'Program.cs'),
-        'System.Console.WriteLine(StaticNorth.AsyncApi.Core.AsyncApiJson.SupportedVersion);\n');
+    const source = references.includes('Generator') ? `
+using StaticNorth.AsyncApi.Core;
+using StaticNorth.AsyncApi.Generated;
+using StaticNorth.AsyncApi.Generator;
+
+var builder = new AsyncApiDocumentBuilder(document => document.Info("Smoke", "1.0.0"));
+AsyncApiDefinitions.Register(builder);
+System.Console.WriteLine(System.Text.Encoding.UTF8.GetString(AsyncApiJson.Write(builder.Build())));
+
+[AsyncApiDefinition]
+internal sealed class SmokeDefinition : IAsyncApiMessageDefinition<string>
+{
+    public void Configure(IMessageBuilder<string> message)
+    {
+        message.Name("smoke");
+    }
+}
+` : 'System.Console.WriteLine(StaticNorth.AsyncApi.Core.AsyncApiJson.SupportedVersion);\n';
+    writeFileSync(join(directory, 'Program.cs'), source);
     dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
     dotnet(directory, 'build', project, '--no-restore', '--disable-build-servers');
 
@@ -66,6 +83,12 @@ ${packageReferences.join('\n')}
     const runtimeFiles = readdirSync(join(directory, 'bin', 'Debug', 'net11.0'));
     assert.equal(runtimeFiles.includes(`${prefix}Generator.dll`), references.includes('Generator'));
     assert.ok(!runtimeFiles.includes(`${prefix}Generator.Analyzers.dll`));
+
+    if (references.includes('Generator')) {
+        const output = dotnet(directory, 'bin/Debug/net11.0/Smoke.dll');
+        const document = JSON.parse(output);
+        assert.equal(document.components.messages.smoke.name, 'smoke');
+    }
 }
 
 test('The producer and client packages share one compiler analyzer', () => {
