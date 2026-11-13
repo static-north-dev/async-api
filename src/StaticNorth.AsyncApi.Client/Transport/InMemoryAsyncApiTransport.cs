@@ -5,11 +5,15 @@ using StaticNorth.AsyncApi.Core.Transport;
 
 namespace StaticNorth.AsyncApi.Client.Transport;
 
+/// <summary>Delivers messages to subscribers in the same process by channel address and message key.</summary>
+/// <remarks>Subscriptions belong to this instance. The transport provides no persistence, retries, or acknowledgements.</remarks>
 public sealed class InMemoryAsyncApiTransport : IAsyncApiTransport
 {
     private readonly Lock _gate = new();
     private readonly ConcurrentDictionary<(string Address, string MessageKey), ImmutableArray<InMemorySubscription>> _subscriptions = new();
 
+    /// <inheritdoc />
+    /// <remarks>Disposal removes the handler from future publishes. A publish that already captured the subscription can still invoke it.</remarks>
     public ValueTask<IAsyncDisposable> SubscribeAsync(
         AsyncApiMessageRoute route,
         Func<AsyncApiEnvelope, CancellationToken, ValueTask> handler,
@@ -31,6 +35,9 @@ public sealed class InMemoryAsyncApiTransport : IAsyncApiTransport
         return ValueTask.FromResult<IAsyncDisposable>(subscription);
     }
 
+    /// <inheritdoc />
+    /// <remarks>Each publish invokes matching handlers in registration order. Concurrent publishes can invoke the same handler concurrently. A handler failure is reported after the remaining handlers run unless delivery is canceled.</remarks>
+    /// <exception cref="AggregateException">More than one handler fails during the publish.</exception>
     public async ValueTask PublishAsync(AsyncApiEnvelope message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);

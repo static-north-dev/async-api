@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace StaticNorth.AsyncApi.Generator.SourceGeneration;
 
+/// <summary>Generates registration code for annotated AsyncAPI definition classes.</summary>
 [GeneratorAttribute(LanguageNames.CSharp)]
 public sealed class ProducerGenerator : IIncrementalGenerator
 {
@@ -29,6 +30,7 @@ public sealed class ProducerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var candidates = context.SyntaxProvider

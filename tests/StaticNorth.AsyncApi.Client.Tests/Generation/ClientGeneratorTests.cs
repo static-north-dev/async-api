@@ -1,11 +1,52 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using StaticNorth.AsyncApi.Tests;
+using System.Xml.Linq;
 
 namespace StaticNorth.AsyncApi.Client.Tests;
 
 public sealed class ClientGeneratorTests
 {
+    [Test]
+    public async Task EmitsValidXmlDocumentationForContractNames()
+    {
+        const string json = """
+            {
+              "asyncapi":"3.1.0","info":{"title":"Orders","version":"1"},
+              "channels":{"orders":{"address":"orders","messages":{"item&<>":{"payload":{
+                "type":"object","properties":{"status&<>":{"enum":["open&<>"]}}
+              }}}}},
+              "operations":{"send&<>\u0001\u2028more":{"action":"receive","channel":{"$ref":"#/channels/orders"}}}
+            }
+            """;
+        var result = Generate(new ContractFile("orders.asyncapi.json", json), out var output);
+        using var assembly = new MemoryStream();
+        using var documentation = new MemoryStream();
+        var emitted = output.Emit(assembly, xmlDocumentationStream: documentation);
+
+        await Assert
+            .That(result.Diagnostics)
+            .IsEmpty();
+        await Assert
+            .That(emitted.Diagnostics.Where(diagnostic => diagnostic.Severity is DiagnosticSeverity.Warning or DiagnosticSeverity.Error))
+            .IsEmpty();
+
+        documentation.Position = 0;
+        var xml = XDocument.Load(documentation);
+        var members = xml.Descendants("member").ToDictionary(member => (string)member.Attribute("name")!, StringComparer.Ordinal);
+        const string prefix = "AsyncApi.Generated.Orders.";
+
+        await Assert
+            .That(members[$"T:{prefix}ISendMorePublisher"].Element("summary")!.Element("c")!.Value)
+            .IsEqualTo("send&<>\uFFFD more");
+        await Assert
+            .That(members[$"P:{prefix}Item.Status"].Element("summary")!.Element("c")!.Value)
+            .IsEqualTo("status&<>");
+        await Assert
+            .That(members[$"F:{prefix}ItemStatus.Open"].Element("summary")!.Element("c")!.Value)
+            .IsEqualTo("open&<>");
+    }
+
     [Test]
     public async Task GeneratesCompilableClientContractsWithLocalReferences()
     {
@@ -240,7 +281,8 @@ public sealed class ClientGeneratorTests
         var compilation = CSharpCompilation.Create(
             "Consumer", references: references, options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         var generator = GeneratorTestAssembly.Create("ClientGenerator");
-        var driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], files);
+        var parseOptions = CSharpParseOptions.Default.WithDocumentationMode(DocumentationMode.Diagnose);
+        var driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], files, parseOptions);
 
         return driver
             .RunGeneratorsAndUpdateCompilation(compilation, out output, out _)

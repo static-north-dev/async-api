@@ -3,10 +3,17 @@ using System.Text.Json;
 
 namespace StaticNorth.AsyncApi.Core;
 
+/// <summary>Reads and writes AsyncAPI documents as UTF-8 JSON.</summary>
 public static class AsyncApiJson
 {
+    /// <summary>The AsyncAPI specification version accepted by the reader.</summary>
     public const string SupportedVersion = "3.1.0";
 
+    /// <summary>Reads an AsyncAPI document from UTF-8 JSON.</summary>
+    /// <param name="utf8Json">The complete JSON document.</param>
+    /// <returns>A document that owns its JSON data.</returns>
+    /// <remarks>Checks the specification version and basic document structure. References and schemas are preserved as JSON.</remarks>
+    /// <exception cref="JsonException">The input is invalid JSON, has an unsupported specification version, or has an invalid document structure.</exception>
     public static AsyncApiDocument Read(ReadOnlyMemory<byte> utf8Json)
     {
         var options = new JsonDocumentOptions { AllowDuplicateProperties = false };
@@ -44,6 +51,9 @@ public static class AsyncApiJson
         }
     }
 
+    /// <summary>Serializes a document as UTF-8 JSON with object properties ordered by name.</summary>
+    /// <param name="document">The document to serialize.</param>
+    /// <returns>A new byte array containing the serialized document.</returns>
     public static byte[] Write(AsyncApiDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);

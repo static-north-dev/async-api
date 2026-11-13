@@ -202,6 +202,7 @@ internal sealed class SchemaEmitter(ContractReferences references, HashSet<strin
         var wireNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var source = new StringBuilder();
         source
+            .Append("/// <summary>Represents a string enumeration declared in the AsyncAPI payload schema.</summary>\n")
             .Append($"[global::System.Text.Json.Serialization.JsonConverter(typeof(global::System.Text.Json.Serialization.JsonStringEnumConverter<{name}>))]\n")
             .Append($"public enum {name}\n{{\n");
 
@@ -217,6 +218,7 @@ internal sealed class SchemaEmitter(ContractReferences references, HashSet<strin
             }
 
             source
+                .Append($"    /// <summary>The wire value <c>{ClientNames.XmlText(wireName)}</c>.</summary>\n")
                 .Append($"    [global::System.Text.Json.Serialization.JsonStringEnumMemberName({ClientNames.Literal(wireName)})]\n")
                 .Append($"    {member},\n");
         }
@@ -280,6 +282,7 @@ internal sealed class SchemaEmitter(ContractReferences references, HashSet<strin
         Reserve(schema, name);
         var members = new HashSet<string>(StringComparer.Ordinal) { name, "Equals", "GetHashCode", "GetType", "ToString", "MemberwiseClone", "Finalize" };
         var source = new StringBuilder();
+        source.Append("/// <summary>Represents an object declared in the AsyncAPI payload schema.</summary>\n");
         if (additional.Kind == JsonValueKind.False)
         {
             source.Append("[global::System.Text.Json.Serialization.JsonUnmappedMemberHandling(global::System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]\n");
@@ -298,7 +301,10 @@ internal sealed class SchemaEmitter(ContractReferences references, HashSet<strin
 
             var fieldType = TypeOf(field, name + member, depth + 1);
             var isRequired = requiredNames.Contains(wireName);
-            source.Append($"    [global::System.Text.Json.Serialization.JsonPropertyName({ClientNames.Literal(wireName)})]\n");
+            var requiredness = isRequired ? "required" : "optional";
+            source
+                .Append($"    /// <summary>Gets the {requiredness} JSON property <c>{ClientNames.XmlText(wireName)}</c>.</summary>\n")
+                .Append($"    [global::System.Text.Json.Serialization.JsonPropertyName({ClientNames.Literal(wireName)})]\n");
 
             if (!isRequired)
             {

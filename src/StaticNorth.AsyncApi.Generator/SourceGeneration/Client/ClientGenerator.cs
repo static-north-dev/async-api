@@ -6,6 +6,7 @@ using StaticNorth.AsyncApi.Generator.SourceGeneration.Client;
 
 namespace StaticNorth.AsyncApi.Generator.SourceGeneration;
 
+/// <summary>Generates C# client contracts from AsyncAPI JSON files supplied to the compiler.</summary>
 [GeneratorAttribute(LanguageNames.CSharp)]
 public sealed class ClientGenerator : IIncrementalGenerator
 {
@@ -13,6 +14,7 @@ public sealed class ClientGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor UnsupportedDocument = CreateDiagnostic("SNA2002", "Unsupported AsyncAPI contract");
     private static readonly DiagnosticDescriptor SymbolConflict = CreateDiagnostic("SNA2003", "Conflicting AsyncAPI generated symbol");
 
+    /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var clientAvailable = context

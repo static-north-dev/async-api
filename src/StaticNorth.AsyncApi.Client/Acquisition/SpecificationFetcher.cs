@@ -6,11 +6,13 @@ using StaticNorth.AsyncApi.Core;
 
 namespace StaticNorth.AsyncApi.Client.Acquisition;
 
+/// <summary>Downloads AsyncAPI documents and verifies pinned local copies.</summary>
 public sealed class SpecificationFetcher : IDisposable
 {
     private const int MaximumBytes = 4 * 1024 * 1024;
     private readonly HttpClient _client;
 
+    /// <summary>Creates a fetcher that sends requests without following redirects or storing cookies.</summary>
     public SpecificationFetcher()
         : this(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
     {
@@ -21,6 +23,15 @@ public sealed class SpecificationFetcher : IDisposable
         _client = new HttpClient(handler);
     }
 
+    /// <summary>Downloads an AsyncAPI document and replaces the destination file after validation.</summary>
+    /// <param name="source">An absolute HTTP or HTTPS URL without embedded credentials or a fragment.</param>
+    /// <param name="destination">The local path to replace after a successful download.</param>
+    /// <param name="authentication">An optional authentication provider. Requires an HTTPS source.</param>
+    /// <param name="sha256">An optional 64-digit hexadecimal SHA-256 checksum for the downloaded bytes.</param>
+    /// <param name="cancellationToken">A token that requests cancellation of the refresh.</param>
+    /// <returns>A task that completes when the validated document has replaced the destination file.</returns>
+    /// <remarks>Downloads are limited to 4 MiB. A failed refresh leaves the existing file in place.</remarks>
+    /// <exception cref="InvalidOperationException">Authentication, download, validation, or checksum verification fails, or the operation times out.</exception>
     public async Task RefreshAsync(
         Uri source,
         string destination,
@@ -107,6 +118,12 @@ public sealed class SpecificationFetcher : IDisposable
         }
     }
 
+    /// <summary>Reads a pinned AsyncAPI document from disk without making a network request.</summary>
+    /// <param name="path">The local document path.</param>
+    /// <param name="sha256">The expected 64-digit hexadecimal SHA-256 checksum.</param>
+    /// <param name="cancellationToken">A token that requests cancellation of the read.</param>
+    /// <returns>The document after its checksum and basic structure have been verified.</returns>
+    /// <exception cref="InvalidOperationException">The file exceeds 4 MiB, its checksum differs, or it is not a supported AsyncAPI document.</exception>
     public static async Task<AsyncApiDocument> ReadOfflineAsync(
         string path, string sha256, CancellationToken cancellationToken = default)
     {
@@ -124,6 +141,7 @@ public sealed class SpecificationFetcher : IDisposable
         return Validate(data, expected);
     }
 
+    /// <summary>Disposes the HTTP client owned by the fetcher.</summary>
     public void Dispose()
     {
         _client.Dispose();

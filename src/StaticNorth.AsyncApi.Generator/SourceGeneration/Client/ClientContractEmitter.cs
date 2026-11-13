@@ -108,7 +108,11 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
         var routeFields = new StringBuilder();
         var routeInitializers = new StringBuilder();
         var implementations = new StringBuilder();
-        source.Append($"\npublic interface {interfaceName}\n{{\n");
+        var actionSummary = sending ? "Subscribes to messages from" : "Publishes messages to";
+        var operationName = ClientNames.XmlText(id);
+        source
+            .Append($"\n/// <summary>{actionSummary} the documented <c>{operationName}</c> operation.</summary>\n")
+            .Append($"public interface {interfaceName}\n{{\n");
 
         foreach (var (key, node) in selected)
         {
@@ -147,7 +151,8 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
                 signature = $"global::System.Threading.Tasks.ValueTask {method}({arguments}{cancellation})";
             }
 
-            source.Append($"    {signature};\n");
+            WriteMethodDocumentation(source, sending, payload.Exists, key);
+            source.Append($"    {signature};\n\n");
 
             if (clientAvailable)
             {
@@ -156,19 +161,21 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
                 WriteImplementation(implementations, signature, sending, type, field);
             }
 
-            MessageConstant(bindings, metadata, node, suffix + "MessageKey", key);
-            MessageConstant(bindings, metadata, node, suffix + "ContentType", contentType);
-            MessageConstant(bindings, metadata, node, suffix + "MessageBindingsJson", BindingJson(message));
-            MessageConstant(bindings, metadata, node, suffix + "HeadersJson", RawJson(message.Field("headers")));
+            MessageConstant(bindings, metadata, node, suffix + "MessageKey", key, "The message key within the channel.");
+            MessageConstant(bindings, metadata, node, suffix + "ContentType", contentType, "The message payload media type.");
+            MessageConstant(bindings, metadata, node, suffix + "MessageBindingsJson", BindingJson(message), "The message protocol bindings as JSON, if present.");
+            MessageConstant(bindings, metadata, node, suffix + "HeadersJson", RawJson(message.Field("headers")), "The message headers schema as JSON, if present.");
         }
 
-        source.Append($"}}\n\npublic static class {metadataName}\n{{\n");
-        Constant(source, "OperationId", id);
-        Constant(source, "DocumentAction", sending ? "send" : "receive");
-        Constant(source, "ChannelId", channelId);
-        Constant(source, "ChannelAddress", channelAddress);
-        Constant(source, "ChannelBindingsJson", BindingJson(channel));
-        Constant(source, "OperationBindingsJson", BindingJson(operation));
+        source
+            .Append($"}}\n\n/// <summary>Contract metadata for the <c>{operationName}</c> operation.</summary>\n")
+            .Append($"public static class {metadataName}\n{{\n");
+        Constant(source, "OperationId", id, "The operation ID in the AsyncAPI document.");
+        Constant(source, "DocumentAction", sending ? "send" : "receive", "The action from the perspective of the application described by the document.");
+        Constant(source, "ChannelId", channelId, "The channel ID in the AsyncAPI document.");
+        Constant(source, "ChannelAddress", channelAddress, "The declared channel address or template, if present.");
+        Constant(source, "ChannelBindingsJson", BindingJson(channel), "The channel protocol bindings as JSON, if present.");
+        Constant(source, "OperationBindingsJson", BindingJson(operation), "The operation protocol bindings as JSON, if present.");
         source
             .Append(bindings)
             .Append("}\n");
@@ -178,6 +185,36 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
             WriteClient(source, routeFields, routeInitializers, implementations,
                 clientName, interfaceName, metadataName, channelAddress);
         }
+    }
+
+    private static void WriteMethodDocumentation(StringBuilder source, bool subscribing, bool hasPayload, string key)
+    {
+        var message = ClientNames.XmlText(key);
+
+        if (subscribing)
+        {
+            var callback = hasPayload
+                ? "The callback that receives the deserialized payload and a delivery cancellation token."
+                : "The callback that receives a delivery cancellation token when the message arrives.";
+            source
+                .Append($"    /// <summary>Subscribes to <c>{message}</c> messages.</summary>\n")
+                .Append($"    /// <param name=\"handler\">{callback}</param>\n")
+                .Append("    /// <param name=\"cancellationToken\">A token that requests cancellation of subscription registration.</param>\n")
+                .Append("    /// <returns>A handle to dispose when the subscription is no longer needed.</returns>\n");
+            return;
+        }
+
+        var payload = hasPayload ? "" : " with no payload";
+        source.Append($"    /// <summary>Publishes a <c>{message}</c> message{payload}.</summary>\n");
+
+        if (hasPayload)
+        {
+            source.Append("    /// <param name=\"message\">The payload to serialize as JSON.</param>\n");
+        }
+
+        source
+            .Append("    /// <param name=\"cancellationToken\">A token that requests cancellation of the publish.</param>\n")
+            .Append("    /// <returns>A task that represents the transport's publish operation.</returns>\n");
     }
 
     private static void WriteImplementation(
@@ -195,6 +232,7 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
 
         source.Append($$"""
 
+                /// <inheritdoc />
                 public {{signature}}
                 {
                     return _client.{{method}}({{routeField}}, {{arguments}}cancellationToken);
@@ -229,7 +267,9 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
         string metadata,
         string? address)
     {
-        source.Append($"\npublic sealed class {name} : {contract}\n{{\n");
+        source
+            .Append($"\n/// <summary>Implements <see cref=\"{contract}\"/> using an AsyncAPI transport.</summary>\n")
+            .Append($"public sealed class {name} : {contract}\n{{\n");
 
         if (routeFields.Length > 0)
         {
@@ -238,6 +278,10 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
             source.Append(routeFields);
             source.Append($$"""
 
+                    /// <summary>Creates a client for the operation.</summary>
+                    /// <param name="transport">The transport used to send or receive messages.</param>
+                    /// <param name="channelAddress">A concrete channel address. Supply one when the contract omits the address or uses a template.</param>
+                    /// <param name="serializerOptions">Optional JSON serialization settings.</param>
                     public {{name}}(
                         global::StaticNorth.AsyncApi.Core.Transport.IAsyncApiTransport transport,
                         string? channelAddress{{defaultAddress}},
@@ -319,21 +363,24 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
         return node.Exists ? node.Value.GetRawText() : null;
     }
 
-    private static void Constant(StringBuilder source, string name, string? value)
+    private static void Constant(StringBuilder source, string name, string? value, string summary)
     {
         var declaration = value is null ? "string?" : "string";
         var expression = value is null ? "null" : ClientNames.Literal(value);
-        source.Append($"    public const {declaration} {name} = {expression};\n");
+        source
+            .Append($"    /// <summary>{summary}</summary>\n")
+            .Append($"    public const {declaration} {name} = {expression};\n\n");
     }
 
-    private static void MessageConstant(StringBuilder source, HashSet<string> names, ContractNode node, string name, string? value)
+    private static void MessageConstant(
+        StringBuilder source, HashSet<string> names, ContractNode node, string name, string? value, string summary)
     {
         if (!names.Add(name))
         {
             throw new ContractException(node.Path, $"generated metadata name '{name}' conflicts with another member");
         }
 
-        Constant(source, name, value);
+        Constant(source, name, value, summary);
     }
 
     private void Reserve(ContractNode node, string name)

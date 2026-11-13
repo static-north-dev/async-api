@@ -5,6 +5,7 @@ using StaticNorth.AsyncApi.Core;
 
 namespace StaticNorth.AsyncApi.Generator;
 
+/// <summary>Builds an AsyncAPI document from registered message, channel, and operation definitions.</summary>
 public sealed class AsyncApiDocumentBuilder
 {
     private readonly Action<IDocumentBuilder> _configure;
@@ -13,6 +14,9 @@ public sealed class AsyncApiDocumentBuilder
     private readonly List<Func<IAsyncApiChannelDefinition>> _channels = [];
     private readonly List<Func<IAsyncApiOperationDefinition>> _operations = [];
 
+    /// <summary>Creates a builder with the document configuration to run on each build.</summary>
+    /// <param name="configure">The callback that sets document metadata and components.</param>
+    /// <param name="serializerOptions">Optional settings for schema inference and example serialization. The builder takes a copy when settings are supplied.</param>
     public AsyncApiDocumentBuilder(Action<IDocumentBuilder> configure, JsonSerializerOptions? serializerOptions = null)
     {
         ArgumentNullException.ThrowIfNull(configure);
@@ -29,6 +33,10 @@ public sealed class AsyncApiDocumentBuilder
         _serializerOptions.MakeReadOnly();
     }
 
+    /// <summary>Registers a reusable message definition.</summary>
+    /// <typeparam name="TMessage">The payload type used for schema inference and examples.</typeparam>
+    /// <param name="create">The factory that supplies the definition for each build.</param>
+    /// <returns>This builder.</returns>
     public AsyncApiDocumentBuilder AddMessage<TMessage>(Func<IAsyncApiMessageDefinition<TMessage>> create)
     {
         ArgumentNullException.ThrowIfNull(create);
@@ -42,6 +50,9 @@ public sealed class AsyncApiDocumentBuilder
         return this;
     }
 
+    /// <summary>Registers a channel definition.</summary>
+    /// <param name="create">The factory that supplies the definition for each build.</param>
+    /// <returns>This builder.</returns>
     public AsyncApiDocumentBuilder AddChannel(Func<IAsyncApiChannelDefinition> create)
     {
         ArgumentNullException.ThrowIfNull(create);
@@ -49,6 +60,9 @@ public sealed class AsyncApiDocumentBuilder
         return this;
     }
 
+    /// <summary>Registers a operation definition.</summary>
+    /// <param name="create">The factory that supplies the definition for each build.</param>
+    /// <returns>This builder.</returns>
     public AsyncApiDocumentBuilder AddOperation(Func<IAsyncApiOperationDefinition> create)
     {
         ArgumentNullException.ThrowIfNull(create);
@@ -56,6 +70,10 @@ public sealed class AsyncApiDocumentBuilder
         return this;
     }
 
+    /// <summary>Runs the registered definitions and builds a fresh document.</summary>
+    /// <returns>The assembled document with its builder-authored references validated.</returns>
+    /// <exception cref="InvalidOperationException">A factory returns null or the definitions contain missing, duplicate, or inconsistent declarations.</exception>
+    /// <exception cref="NotSupportedException">A payload or header schema cannot be inferred from the configured serializer metadata.</exception>
     public AsyncApiDocument Build()
     {
         var document = new DocumentBuilder();
