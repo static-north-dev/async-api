@@ -9,4 +9,8 @@
     <ProjectReference Include="../StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
                       IncludeAssets="analyzers" PrivateAssets="none" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Build/StaticNorth.AsyncApi.Client.props" Pack="true" PackagePath="buildTransitive/StaticNorth.AsyncApi.Client.props" />
+  </ItemGroup>
 </Project>

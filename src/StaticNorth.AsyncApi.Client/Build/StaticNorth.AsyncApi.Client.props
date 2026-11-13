@@ -1,0 +1,8 @@
+<Project>
+  <ItemGroup>
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="AsyncApiNamespace" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="AsyncApiAlias" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="AsyncApiModelPrefix" />
+    <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="AsyncApiGenerate" />
+  </ItemGroup>
+</Project>

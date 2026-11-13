@@ -9,6 +9,8 @@
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Client/StaticNorth.AsyncApi.Client.csproj" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
                       SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
-    <AdditionalFiles Include="../Contracts/orders.asyncapi.json" />
+    <AdditionalFiles Include="../Contracts/orders.asyncapi.json" AsyncApiNamespace="Orders.Contracts" />
   </ItemGroup>
+
+  <Import Project="../../src/StaticNorth.AsyncApi.Client/Build/StaticNorth.AsyncApi.Client.props" />
 </Project>

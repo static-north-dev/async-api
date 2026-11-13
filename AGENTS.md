@@ -2,6 +2,7 @@
 
 ## Code formatting and readability
 
+- Group related files in folders by feature or responsibility. Keep a feature's implementation, supporting types, and related tests together within their respective projects. Use descriptive folder names that reflect the code's purpose.
 - Always format code you add or modify using the repository's formatting and style conventions. For C#, use `dotnet format` with the relevant project or solution and `--include` paths.
 - Use explicit, structured curly braces for every control-flow body, including single-statement `if`, `else`, loop, `using`, `try`, and `catch` blocks. In C#, place braces and their contents on separate, properly indented lines.
 - Separate guard clauses, conditional blocks, loops, exception handling, and other logical sections with blank lines. Group closely related declarations where that improves readability.

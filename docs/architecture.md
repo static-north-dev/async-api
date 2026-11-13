@@ -1,6 +1,6 @@
 # ADR 0001 — AsyncAPI document generation and export
 
-Accepted for M1 and M2. The consumer section records the direction for M3.
+Accepted for M1, M2, and M3.
 
 ## Packages and compatibility
 
@@ -31,7 +31,7 @@ Roslyn emits an internal `StaticNorth.AsyncApi.Generated.AsyncApiDefinitions` ty
 
 Roslyn validates declarations such as inaccessible types, unsupported generic shapes and a conflicting generated entry point. The builder validates configured IDs, required metadata and builder-authored references when it executes `Configure`. A message component ID defaults to its name and can be set with `Id(...)`. Multiple definitions can use the same CLR payload type. Each channel selects messages by component ID and may assign its own local keys. Operations select messages using those channel keys.
 
-`SNA1001` reports invalid definition classes and `SNA1002` reports a conflicting generated registration name. `SNA2xxx` is reserved for client diagnostics.
+`SNA1001` reports invalid definition classes and `SNA1002` reports a conflicting generated registration name.
 
 Schema inference uses the .NET JSON Schema exporter. Defaults use camel case and respect nullable annotations and required constructor parameters. An explicit serializer configuration controls the same wire shape for inferred schemas and examples. Recursive schemas refer back into the message's reusable schema component. Supply explicit schemas for opaque types, custom converters, polymorphism or reference handling.
 
@@ -43,4 +43,8 @@ An ASP.NET Core host can opt in to `MapAsyncApi`, with `/asyncapi.json` as the d
 
 ## Consumer boundary
 
-The Client generator will read local JSON documents from `AdditionalFiles`. From the consuming application's perspective, a documented `send` produces a subscriber contract and a documented `receive` produces a publisher contract. Transport lifetimes and delivery semantics belong to the later runtime contracts and their adapters. Remote acquisition runs in a separate, explicitly invoked process.
+The Client generator reads local `*.asyncapi.json` documents from `AdditionalFiles`. The Generator project's compiler target runs in the .NET 11 SDK host and uses its `System.Text.Json` runtime. The Client package exposes compiler-visible metadata for per-file settings. It supplies the same analyzer as the Generator package, and the analyzer loads once when both packages are present.
+
+A documented `send` produces a subscriber contract with a `ValueTask<IAsyncDisposable>` subscription handle. A documented `receive` produces a publisher contract with a `ValueTask` method. Each method takes an optional cancellation token. Operation metadata preserves the original AsyncAPI routing keys and binding JSON. Transport adapters, delivery semantics, and remote acquisition belong to later phases.
+
+`SNA2001` identifies invalid documents, `SNA2002` identifies unsupported constructs, and `SNA2003` identifies conflicts between generated or existing symbols. Diagnostics identify the input file and include the relevant JSON path for contract errors.

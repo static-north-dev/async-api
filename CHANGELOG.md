@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M3 client
+
+- Generate DTOs, publisher and subscriber interfaces, and binding metadata from local AsyncAPI 3.1.0 JSON contracts.
+- Support per-file namespace, alias, model prefix, and direction settings. Report malformed documents, unsupported schemas, and generated symbol conflicts during compilation.
+- Verify that a client built from the packed NuGets can consume the producer's exported Orders document.
+
 ## Unreleased — M2 producer
 
 - Added annotated message, channel, and operation definitions with generated registration.

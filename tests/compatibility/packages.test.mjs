@@ -19,6 +19,10 @@ function verifyConsumer(directory, feed, cache, version, references) {
     const project = 'Smoke.csproj';
     const packageReferences = references.map(name =>
         `    <PackageReference Include="${prefix}${name}" Version="${version}" />`);
+    const clientOnly = references.length === 1 && references[0] === 'Client';
+    const contractItem = clientOnly
+        ? '    <AdditionalFiles Include="orders.asyncapi.json" AsyncApiNamespace="Smoke.Contracts" AsyncApiModelPrefix="Wire" AsyncApiGenerate="subscribers" />'
+        : '';
 
     writeFileSync(join(directory, project), `
 <Project Sdk="Microsoft.NET.Sdk">
@@ -29,10 +33,20 @@ function verifyConsumer(directory, feed, cache, version, references) {
   </PropertyGroup>
   <ItemGroup>
 ${packageReferences.join('\n')}
+${contractItem}
   </ItemGroup>
 </Project>
 `);
-    const source = references.includes('Generator') ? `
+    const source = clientOnly ? `
+using Smoke.Contracts;
+
+var json = System.IO.File.ReadAllText("orders.asyncapi.json");
+using var document = System.Text.Json.JsonDocument.Parse(json);
+var example = document.RootElement.GetProperty("components").GetProperty("messages").GetProperty("OrderCreated").GetProperty("examples")[0].GetProperty("payload");
+var options = new System.Text.Json.JsonSerializerOptions { RespectNullableAnnotations = true };
+var message = System.Text.Json.JsonSerializer.Deserialize<WireOrderCreated>(example.GetRawText(), options)!;
+System.Console.WriteLine($"{typeof(IPublishOrderCreatedSubscriber).Name}|{PublishOrderCreatedMetadata.ChannelAddress}|{message.Status}|{message.Items[0].Sku}");
+` : `
 using StaticNorth.AsyncApi.Core;
 using StaticNorth.AsyncApi.Generated;
 using StaticNorth.AsyncApi.Generator;
@@ -49,8 +63,15 @@ internal sealed class SmokeDefinition : IAsyncApiMessageDefinition<string>
         message.Name("smoke");
     }
 }
-` : 'System.Console.WriteLine(StaticNorth.AsyncApi.Core.AsyncApiJson.SupportedVersion);\n';
+`;
     writeFileSync(join(directory, 'Program.cs'), source);
+
+    if (clientOnly) {
+        const json = dotnet(root, 'run', '--no-build', '--project', 'samples/Producer', '--', 'export');
+        const contract = JSON.parse(json);
+        contract.operations.unsupportedPublish = { action: 'receive', channel: { $ref: 'external.json#/channels/orders' } };
+        writeFileSync(join(directory, 'orders.asyncapi.json'), JSON.stringify(contract));
+    }
     dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
     dotnet(directory, 'build', project, '--no-restore', '--disable-build-servers');
 
@@ -88,6 +109,11 @@ internal sealed class SmokeDefinition : IAsyncApiMessageDefinition<string>
         const output = dotnet(directory, 'bin/Debug/net11.0/Smoke.dll');
         const document = JSON.parse(output);
         assert.equal(document.components.messages.smoke.name, 'smoke');
+    }
+
+    if (clientOnly) {
+        const output = dotnet(directory, 'bin/Debug/net11.0/Smoke.dll');
+        assert.equal(output.trim(), 'IPublishOrderCreatedSubscriber|orders.{region}|Created|ABC-123');
     }
 }
 
