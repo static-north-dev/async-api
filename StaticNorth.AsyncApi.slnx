@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Consumer/Consumer.csproj" />
+    <Project Path="samples/FetchContract/FetchContract.csproj" />
+    <Project Path="samples/Producer/Producer.csproj" />
+    <Project Path="samples/WebProducer/WebProducer.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/StaticNorth.AsyncApi.Client/StaticNorth.AsyncApi.Client.csproj" />
+    <Project Path="src/StaticNorth.AsyncApi.Core/StaticNorth.AsyncApi.Core.csproj" />
+    <Project Path="src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StaticNorth.AsyncApi.Client.Tests/StaticNorth.AsyncApi.Client.Tests.csproj" />
+    <Project Path="tests/StaticNorth.AsyncApi.Core.Tests/StaticNorth.AsyncApi.Core.Tests.csproj" />
+    <Project Path="tests/StaticNorth.AsyncApi.Generator.Tests/StaticNorth.AsyncApi.Generator.Tests.csproj" />
+  </Folder>
+</Solution>

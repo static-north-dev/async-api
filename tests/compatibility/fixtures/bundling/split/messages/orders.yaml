@@ -1,0 +1,4 @@
+created:
+  name: OrderCreated
+  payload:
+    $ref: ../schemas/order.json#/OrderCreated

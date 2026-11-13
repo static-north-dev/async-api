@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;netstandard2.0</TargetFrameworks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>StaticNorth.AsyncApi.Generator</PackageId>
+    <Description>AsyncAPI source generators and code-first runtime support for .NET.</Description>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackAnalyzer</TargetsForTfmSpecificContentInPackage>
+    <!-- The netstandard2.0 target is packaged as an analyzer asset. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <AssemblyName>StaticNorth.AsyncApi.Generator.Analyzers</AssemblyName>
+    <LangVersion>15.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <Compile Include="SourceGeneration/**/*.cs" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+    <Compile Remove="SourceGeneration/**/*.cs" />
+    <Compile Remove="Hosting/**/*.cs" />
+    <ProjectReference Include="../StaticNorth.AsyncApi.Core/StaticNorth.AsyncApi.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Hosting/AsyncApiEndpointExtensions.cs" Pack="true" PackagePath="buildTransitive/AsyncApiEndpointExtensions.cs" />
+    <None Include="Hosting/AsyncApiDocumentSnapshot.cs" Pack="true" PackagePath="buildTransitive/AsyncApiDocumentSnapshot.cs" />
+    <None Include="Hosting/StaticNorth.AsyncApi.Generator.targets" Pack="true" PackagePath="buildTransitive/StaticNorth.AsyncApi.Generator.targets" />
+  </ItemGroup>
+
+  <Target Name="PackAnalyzer" Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(TargetPath)" PackagePath="analyzers/dotnet/cs/" />
+      <TfmSpecificPackageFile Include="$(DocumentationFile)" PackagePath="analyzers/dotnet/cs/" />
+    </ItemGroup>
+  </Target>
+</Project>

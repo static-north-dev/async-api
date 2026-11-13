@@ -1,0 +1,25 @@
+asyncapi: 3.1.0
+info:
+  title: Split orders
+  version: 1.0.0
+defaultContentType: application/json
+channels:
+  orders:
+    $ref: ./channels/orders.yml
+operations:
+  publishOrder:
+    action: send
+    channel:
+      $ref: '#/channels/orders'
+    messages:
+      - $ref: '#/channels/orders/messages/orderCreated'
+  acceptOrder:
+    $ref: ./operations/accept.yaml
+components:
+  messages:
+    OrderCreated:
+      $ref: ./messages/orders.yaml#/created
+  schemas:
+    OrderCreated:
+      $ref: ./schemas/order.json#/OrderCreated
+x-release-track: test

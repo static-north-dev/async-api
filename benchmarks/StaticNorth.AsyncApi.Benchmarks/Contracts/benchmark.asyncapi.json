@@ -1,0 +1,17 @@
+{
+  "asyncapi": "3.1.0",
+  "info": { "title": "Transport benchmark", "version": "1" },
+  "channels": {
+    "messages": {
+      "address": "benchmark.messages",
+      "messages": {
+        "data": { "payload": { "type": "string" } },
+        "heartbeat": {}
+      }
+    }
+  },
+  "operations": {
+    "send": { "action": "receive", "channel": { "$ref": "#/channels/messages" } },
+    "receive": { "action": "send", "channel": { "$ref": "#/channels/messages" } }
+  }
+}

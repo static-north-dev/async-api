@@ -1,0 +1,5 @@
+action: receive
+channel:
+  $ref: ../channels/orders.yml
+messages:
+  - $ref: ../channels/orders.yml#/messages/orderCreated

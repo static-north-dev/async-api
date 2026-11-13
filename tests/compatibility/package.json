@@ -1,0 +1,14 @@
+{
+  "name": "staticnorth-asyncapi-compatibility",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "test:viewer": "node --test viewer/viewer.mjs"
+  },
+  "devDependencies": {
+    "@asyncapi/parser": "3.6.6",
+    "@asyncapi/specs": "6.11.1",
+    "playwright": "1.65.0"
+  }
+}

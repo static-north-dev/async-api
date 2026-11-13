@@ -1,0 +1,54 @@
+name: Publish NuGet packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref_name == github.event.repository.default_branch
+    uses: ./.github/workflows/verify.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nuget-packages
+          path: artifacts
+      - name: Check package files
+        shell: bash
+        run: |
+          shopt -s nullglob
+          all=(artifacts/*.nupkg)
+          test "${#all[@]}" -eq 3
+          for name in Core Generator Client; do
+            files=(artifacts/StaticNorth.AsyncApi."$name".[0-9]*.nupkg)
+            test "${#files[@]}" -eq 1
+          done
+      - uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Push packages
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          for name in Core Generator Client; do
+            dotnet nuget push artifacts/StaticNorth.AsyncApi."$name".[0-9]*.nupkg \
+              --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
+          done

@@ -1,0 +1,12 @@
+{
+  "OrderCreated": {
+    "type": "object",
+    "required": ["order_id", "detail"],
+    "properties": {
+      "order_id": { "type": "string", "format": "uuid" },
+      "detail": { "$ref": "./detail.yaml#/detail~1type~0" },
+      "next": { "$ref": "#/OrderCreated" },
+      "previousDetail": { "$ref": "./detail.yaml#/detail~1type~0" }
+    }
+  }
+}

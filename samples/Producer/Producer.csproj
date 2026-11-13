@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj" />
+    <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
+                      SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+  </ItemGroup>
+</Project>
