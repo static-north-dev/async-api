@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <Description>Contract-first AsyncAPI client generation for .NET.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../StaticNorth.AsyncApi.Core/StaticNorth.AsyncApi.Core.csproj" />
+    <ProjectReference Include="../StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
+                      IncludeAssets="analyzers" PrivateAssets="none" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+using Microsoft.CodeAnalysis;
+
+namespace StaticNorth.AsyncApi.Generator.SourceGeneration;
+
+[GeneratorAttribute(LanguageNames.CSharp)]
+public sealed class ClientGenerator : IIncrementalGenerator
+{
+    public void Initialize(IncrementalGeneratorInitializationContext context)
+    {
+    }
+}

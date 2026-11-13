@@ -1,0 +1,10 @@
+{
+  "name": "staticnorth-asyncapi-compatibility",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "devDependencies": {
+    "@asyncapi/parser": "3.6.6",
+    "@asyncapi/specs": "6.11.1"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "asyncapi": "3.1.0",
+  "info": {
+    "title": "Orders",
+    "version": "1.0.0"
+  },
+  "defaultContentType": "application/json",
+  "channels": {
+    "orders": {
+      "address": "orders.events",
+      "messages": {
+        "orderCreated": { "$ref": "#/components/messages/OrderCreated" }
+      }
+    }
+  },
+  "operations": {
+    "publishOrderCreated": {
+      "action": "send",
+      "channel": { "$ref": "#/channels/orders" },
+      "messages": [{ "$ref": "#/channels/orders/messages/orderCreated" }]
+    }
+  },
+  "components": {
+    "messages": {
+      "OrderCreated": {
+        "name": "order.created",
+        "payload": {
+          "type": "object",
+          "properties": {
+            "orderId": { "type": "string", "format": "uuid" }
+          },
+          "required": ["orderId"]
+        }
+      }
+    }
+  },
+  "x-staticnorth-example": { "milestone": "M1" }
+}

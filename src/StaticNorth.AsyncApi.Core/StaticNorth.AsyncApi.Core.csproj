@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <Description>AsyncAPI document model and JSON serialization for .NET.</Description>
+  </PropertyGroup>
+</Project>

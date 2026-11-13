@@ -1,0 +1,8 @@
+root = true
+
+[*.cs]
+csharp_prefer_braces = true:warning
+
+[**/*Endpoint*.cs]
+csharp_style_expression_bodied_methods = false:suggestion
+csharp_style_expression_bodied_lambdas = false:suggestion
