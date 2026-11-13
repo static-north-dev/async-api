@@ -30,26 +30,38 @@ public sealed class ClientGenerator : IIncrementalGenerator
                 return Generate(file, configuration.GetOptions(file), pair.Right, cancellationToken);
             });
 
-        var compilationDocuments = documents
+        var checkedDocuments = documents
+            .Combine(context.CompilationProvider)
+            .Select(static (pair, cancellationToken) =>
+                (Document: pair.Left, Conflict: FindCompilationConflict(
+                    pair.Right.Assembly.GlobalNamespace, pair.Left.Symbols, cancellationToken)))
+            .WithTrackingName("ClientCompilationConflicts")
             .Collect()
-            .Combine(context.CompilationProvider);
+            .WithTrackingName("ClientDocuments");
 
-        context.RegisterSourceOutput(compilationDocuments, static (output, pair) =>
+        context.RegisterSourceOutput(checkedDocuments, static (output, documents) =>
         {
-            var ordered = pair.Left.OrderBy(document => document.Location.GetLineSpan().Path, StringComparer.Ordinal);
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var ordered = documents.OrderBy(item => item.Document.Location.GetLineSpan().Path, StringComparer.Ordinal);
+            var seenTypes = new HashSet<string>(StringComparer.Ordinal);
+            var seenNamespaces = new HashSet<string>(StringComparer.Ordinal);
 
-            foreach (var document in ordered)
+            foreach (var (document, compilationConflict) in ordered)
             {
+                output.CancellationToken.ThrowIfCancellationRequested();
+
                 if (document.Error is not null)
                 {
                     output.ReportDiagnostic(document.Error);
                     continue;
                 }
 
-                var conflict = document.Symbols.FirstOrDefault(symbol =>
-                    seen.Any(existing => NamesConflict(symbol, existing)) ||
-                    HasNamespaceConflict(pair.Right.Assembly.GlobalNamespace, symbol));
+                if (document.Symbols.Length == 0)
+                {
+                    continue;
+                }
+
+                var namespaceName = document.Symbols[0].Substring(0, document.Symbols[0].LastIndexOf('.'));
+                var conflict = FindGeneratedConflict(document.Symbols, namespaceName, compilationConflict, seenTypes, seenNamespaces);
 
                 if (conflict is not null)
                 {
@@ -58,12 +70,13 @@ public sealed class ClientGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                seen.UnionWith(document.Symbols);
-
-                if (document.Source.Length != 0)
+                seenTypes.UnionWith(document.Symbols);
+                foreach (var prefix in NamespacePrefixes(namespaceName))
                 {
-                    output.AddSource(document.Hint, document.Source);
+                    seenNamespaces.Add(prefix);
                 }
+
+                output.AddSource(document.Hint, document.Source);
             }
         });
     }
@@ -121,41 +134,94 @@ public sealed class ClientGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool NamesConflict(string symbol, string existing)
+    private static string? FindGeneratedConflict(
+        string[] symbols,
+        string namespaceName,
+        string? compilationConflict,
+        HashSet<string> seenTypes,
+        HashSet<string> seenNamespaces)
     {
-        return symbol == existing || symbol.StartsWith(existing + ".", StringComparison.Ordinal) ||
-            existing.StartsWith(symbol + ".", StringComparison.Ordinal);
+        foreach (var prefix in NamespacePrefixes(namespaceName))
+        {
+            if (seenTypes.Contains(prefix))
+            {
+                return symbols[0];
+            }
+        }
+
+        foreach (var symbol in symbols)
+        {
+            if (symbol == compilationConflict || seenTypes.Contains(symbol) || seenNamespaces.Contains(symbol))
+            {
+                return symbol;
+            }
+        }
+
+        return null;
     }
 
-    private static bool HasNamespaceConflict(INamespaceSymbol root, string symbol)
+    private static IEnumerable<string> NamespacePrefixes(string namespaceName)
     {
-        var segments = symbol.Split('.');
-        var current = root;
-
-        for (var index = 0; index < segments.Length; index++)
+        for (var end = namespaceName.IndexOf('.'); end >= 0; end = namespaceName.IndexOf('.', end + 1))
         {
-            var segment = segments[index];
+            yield return namespaceName.Substring(0, end);
+        }
 
-            var types = current.GetTypeMembers(segment, 0);
+        yield return namespaceName;
+    }
 
-            if (types.Any(type => !type.IsFileLocal))
+    private static string? FindCompilationConflict(INamespaceSymbol current, string[] symbols, CancellationToken cancellationToken)
+    {
+        if (symbols.Length == 0)
+        {
+            return null;
+        }
+
+        var first = symbols[0];
+        var typeStart = first.LastIndexOf('.') + 1;
+        var offset = 0;
+
+        while (offset < typeStart)
+        {
+            var end = first.IndexOf('.', offset);
+            var segment = first.Substring(offset, end - offset);
+            INamespaceSymbol? next = null;
+
+            foreach (var member in current.GetMembers(segment))
             {
-                return true;
-            }
+                if (member is INamedTypeSymbol { Arity: 0, IsFileLocal: false })
+                {
+                    return first;
+                }
 
-            var next = current
-                .GetNamespaceMembers()
-                .FirstOrDefault(member => member.Name == segment);
+                if (member is INamespaceSymbol child)
+                {
+                    next = child;
+                }
+            }
 
             if (next is null)
             {
-                return false;
+                return null;
             }
 
             current = next;
+            offset = end + 1;
         }
 
-        return true;
+        foreach (var symbol in symbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            foreach (var member in current.GetMembers(symbol.Substring(typeStart)))
+            {
+                if (member is INamespaceSymbol or INamedTypeSymbol { Arity: 0, IsFileLocal: false })
+                {
+                    return symbol;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static DiagnosticDescriptor CreateDiagnostic(string id, string title)

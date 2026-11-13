@@ -105,6 +105,8 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
             metadataName, "OperationId", "DocumentAction", "ChannelId", "ChannelAddress", "ChannelBindingsJson", "OperationBindingsJson"
         };
         var bindings = new StringBuilder();
+        var routeFields = new StringBuilder();
+        var routeInitializers = new StringBuilder();
         var implementations = new StringBuilder();
         source.Append($"\npublic interface {interfaceName}\n{{\n");
 
@@ -149,7 +151,9 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
 
             if (clientAvailable)
             {
-                WriteImplementation(implementations, signature, sending, type, metadataName, suffix);
+                var field = "_route" + suffix;
+                WriteRoute(routeFields, routeInitializers, field, metadataName, suffix);
+                WriteImplementation(implementations, signature, sending, type, field);
             }
 
             MessageConstant(bindings, metadata, node, suffix + "MessageKey", key);
@@ -171,12 +175,13 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
 
         if (clientAvailable)
         {
-            WriteClient(source, implementations, clientName, interfaceName, metadataName, channelAddress, methods.Count > 1);
+            WriteClient(source, routeFields, routeInitializers, implementations,
+                clientName, interfaceName, metadataName, channelAddress);
         }
     }
 
     private static void WriteImplementation(
-        StringBuilder source, string signature, bool sending, string? type, string metadata, string suffix)
+        StringBuilder source, string signature, bool sending, string? type, string routeField)
     {
         var method = sending ? "SubscribeAsync" : "PublishAsync";
         var arguments = sending ? "handler, " : "";
@@ -192,31 +197,46 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
 
                 public {{signature}}
                 {
-                    var route = new global::StaticNorth.AsyncApi.Core.Transport.AsyncApiMessageRoute(
-                        _address,
+                    return _client.{{method}}({{routeField}}, {{arguments}}cancellationToken);
+                }
+
+            """);
+    }
+
+    private static void WriteRoute(StringBuilder fields, StringBuilder initializers, string field, string metadata, string suffix)
+    {
+        fields.Append($"    private readonly global::StaticNorth.AsyncApi.Core.Transport.AsyncApiMessageRoute {field};\n");
+        initializers.Append($$"""
+
+                    {{field}} = new global::StaticNorth.AsyncApi.Core.Transport.AsyncApiMessageRoute(
+                        address,
                         {{metadata}}.{{suffix}}MessageKey,
                         {{metadata}}.OperationId,
                         {{metadata}}.{{suffix}}ContentType,
                         {{metadata}}.ChannelBindingsJson,
                         {{metadata}}.OperationBindingsJson,
                         {{metadata}}.{{suffix}}MessageBindingsJson);
-                    return _client.{{method}}(route, {{arguments}}cancellationToken);
-                }
-
             """);
     }
 
     private static void WriteClient(
-        StringBuilder source, StringBuilder implementations, string name, string contract, string metadata, string? address, bool hasMessages)
+        StringBuilder source,
+        StringBuilder routeFields,
+        StringBuilder routeInitializers,
+        StringBuilder implementations,
+        string name,
+        string contract,
+        string metadata,
+        string? address)
     {
         source.Append($"\npublic sealed class {name} : {contract}\n{{\n");
 
-        if (hasMessages)
+        if (routeFields.Length > 0)
         {
             var defaultAddress = string.IsNullOrWhiteSpace(address) || address!.IndexOfAny(['{', '}']) >= 0 ? "" : " = null";
+            source.Append("    private readonly global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient _client;\n");
+            source.Append(routeFields);
             source.Append($$"""
-                    private readonly global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient _client;
-                    private readonly string _address;
 
                     public {{name}}(
                         global::StaticNorth.AsyncApi.Core.Transport.IAsyncApiTransport transport,
@@ -224,7 +244,11 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
                         global::System.Text.Json.JsonSerializerOptions? serializerOptions = null)
                     {
                         _client = new global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient(transport, serializerOptions);
-                        _address = global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient.ResolveAddress({{metadata}}.ChannelAddress, channelAddress);
+                        var address = global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient.ResolveAddress({{metadata}}.ChannelAddress, channelAddress);
+                """);
+            source.Append(routeInitializers);
+            source.Append("""
+
                     }
 
                 """);

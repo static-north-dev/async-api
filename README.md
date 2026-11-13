@@ -61,6 +61,17 @@ app
 
 The [web sample](samples/WebProducer/Program.cs) shows generated definition registration and native ASP.NET Core authentication. It reads its demonstration bearer token from `ASYNCAPI_SPEC_TOKEN` and supports a custom route through `AsyncApi__Path`. The endpoint builds the document per request, responds with `application/json` and `Cache-Control: no-store`, and returns a generic 500 problem response for invalid document configuration.
 
+If the contract is shared by all authorized callers, build it once and map a snapshot. The sample enables this mode with `AsyncApi__UseSnapshot=true`.
+
+```csharp
+var snapshot = new AsyncApiDocumentSnapshot(documentBuilder.Build());
+app
+    .MapAsyncApiSnapshot(snapshot, "/asyncapi.json")
+    .RequireAuthorization("InternalApi");
+```
+
+Call `snapshot.Update(documentBuilder.Build())` when the contract changes. Each request uses a complete serialized version, and the host applies authorization and `Cache-Control: no-store` on every request.
+
 ## View the contract in a browser
 
 Set `ASYNCAPI_SPEC_TOKEN` to a local demonstration token, then build and run the optional viewer in the web sample.

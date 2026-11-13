@@ -3,4 +3,7 @@
     <TargetFramework>net11.0</TargetFramework>
     <Description>AsyncAPI document model and JSON serialization for .NET.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="StaticNorth.AsyncApi.Client" />
+  </ItemGroup>
 </Project>

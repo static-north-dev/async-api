@@ -67,7 +67,7 @@ public sealed class SpecificationFetcher : IDisposable
             }
         }
 
-        byte[] data;
+        ReadOnlyMemory<byte> data;
 
         try
         {
@@ -113,7 +113,13 @@ public sealed class SpecificationFetcher : IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentException.ThrowIfNullOrWhiteSpace(sha256);
         var expected = ReadChecksum(sha256);
-        await using var stream = File.OpenRead(path);
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 8192,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
         var data = await ReadBoundedAsync(stream, cancellationToken).ConfigureAwait(false);
         return Validate(data, expected);
     }
@@ -123,7 +129,7 @@ public sealed class SpecificationFetcher : IDisposable
         _client.Dispose();
     }
 
-    private static async Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken cancellationToken)
+    private static async Task<ReadOnlyMemory<byte>> ReadBoundedAsync(Stream stream, CancellationToken cancellationToken)
     {
         using var buffer = new MemoryStream();
         var chunk = ArrayPool<byte>.Shared.Rent(8192);
@@ -138,7 +144,9 @@ public sealed class SpecificationFetcher : IDisposable
 
                 if (count == 0)
                 {
-                    return buffer.ToArray();
+                    return buffer
+                        .GetBuffer()
+                        .AsMemory(0, (int)buffer.Length);
                 }
 
                 if (buffer.Length + count > MaximumBytes)
@@ -155,11 +163,17 @@ public sealed class SpecificationFetcher : IDisposable
         }
     }
 
-    private static AsyncApiDocument Validate(byte[] data, byte[]? expected)
+    private static AsyncApiDocument Validate(ReadOnlyMemory<byte> data, byte[]? expected)
     {
-        if (expected is not null && !CryptographicOperations.FixedTimeEquals(SHA256.HashData(data), expected))
+        if (expected is not null)
         {
-            throw new InvalidOperationException("The specification SHA-256 checksum does not match.");
+            Span<byte> actual = stackalloc byte[SHA256.HashSizeInBytes];
+            SHA256.HashData(data.Span, actual);
+
+            if (!CryptographicOperations.FixedTimeEquals(actual, expected))
+            {
+                throw new InvalidOperationException("The specification SHA-256 checksum does not match.");
+            }
         }
 
         try
@@ -205,7 +219,7 @@ public sealed class SpecificationFetcher : IDisposable
         return Convert.FromHexString(sha256);
     }
 
-    private static async Task ReplaceAsync(string destination, byte[] data, CancellationToken cancellationToken)
+    private static async Task ReplaceAsync(string destination, ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
     {
         var path = Path.GetFullPath(destination);
         var temporary = Path.Combine(Path.GetDirectoryName(path)!, $".asyncapi-{Guid.NewGuid():N}.tmp");

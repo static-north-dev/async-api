@@ -25,6 +25,22 @@ internal static class AsyncApiEndpointExtensions
         return endpoints.MapGet(pattern, Handle);
     }
 
+    public static RouteHandlerBuilder MapAsyncApiSnapshot(
+        this IEndpointRouteBuilder endpoints,
+        AsyncApiDocumentSnapshot snapshot,
+        string pattern = "/asyncapi.json")
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return endpoints.MapGet(pattern, HandleSnapshot);
+
+        IResult HandleSnapshot(HttpContext context)
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            var result = snapshot.GetResponse();
+            return result;
+        }
+    }
+
     private static IResult Handle([FromServices] AsyncApiDocumentBuilder builder, HttpContext context)
     {
         context.Response.Headers.CacheControl = "no-store";

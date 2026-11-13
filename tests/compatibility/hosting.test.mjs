@@ -12,11 +12,20 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const configuration = process.env.ASYNCAPI_TEST_CONFIGURATION ?? 'Debug';
 
-test('The web producer uses the host policy on a custom route', { timeout: 30_000 }, async () => {
+for (const useSnapshot of [false, true]) {
+    test(`The web producer uses the host policy on a custom route (snapshot: ${useSnapshot})`, { timeout: 30_000 }, async () => {
+        await verifyWebProducer(useSnapshot);
+    });
+}
+
+async function verifyWebProducer(useSnapshot) {
     const token = 'local-test-token';
     const child = spawn('dotnet', [`samples/WebProducer/bin/${configuration}/net11.0/WebProducer.dll`, '--urls', 'http://127.0.0.1:0'], {
         cwd: root,
-        env: { ...process.env, ASYNCAPI_SPEC_TOKEN: token, AsyncApi__Path: '/internal/contract.json' },
+        env: {
+            ...process.env, ASYNCAPI_SPEC_TOKEN: token, AsyncApi__Path: '/internal/contract.json',
+            AsyncApi__UseSnapshot: String(useSnapshot),
+        },
     });
     const closed = once(child, 'close');
     let output = '';
@@ -48,7 +57,7 @@ test('The web producer uses the host policy on a custom route', { timeout: 30_00
         child.kill();
         await closed;
     }
-});
+}
 
 async function fetchContract(...args) {
     const child = spawn('dotnet', [`samples/FetchContract/bin/${configuration}/net11.0/FetchContract.dll`, ...args], {

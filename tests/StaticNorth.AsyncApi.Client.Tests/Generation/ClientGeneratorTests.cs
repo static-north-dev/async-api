@@ -67,6 +67,70 @@ public sealed class ClientGeneratorTests
     }
 
     [Test]
+    public async Task ReusesOutputForUnrelatedEditsAndDetectsNewTypeConflicts()
+    {
+        const string json = """
+            {"asyncapi":"3.1.0","info":{"title":"Orders","version":"1"},
+             "channels":{"orders":{}},"operations":{"send":{"action":"send","channel":{"$ref":"#/channels/orders"}}}}
+            """;
+        var compilation = CSharpCompilation.Create("Consumer");
+        var generator = new ClientGenerator();
+        var driver = CSharpGeneratorDriver.Create(
+            [generator.AsSourceGenerator()],
+            [new ContractFile("orders.asyncapi.json", json)],
+            driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
+        var initial = driver.RunGenerators(compilation);
+        var unrelated = compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText("namespace Other; class Edit {}"));
+        var edited = initial.RunGenerators(unrelated);
+        var result = edited.GetRunResult();
+        var generatorResult = result.Results.Single();
+        var step = generatorResult.TrackedSteps["ClientDocuments"].Single();
+
+        await Assert
+            .That(step.Outputs.Single().Reason)
+            .IsEqualTo(IncrementalStepRunReason.Cached);
+
+        var conflicting = unrelated.AddSyntaxTrees(CSharpSyntaxTree.ParseText("namespace AsyncApi.Generated.Orders; class SendMetadata {}"));
+        var updated = edited
+            .RunGenerators(conflicting)
+            .GetRunResult();
+
+        await Assert
+            .That(updated.Diagnostics.Single().Id)
+            .IsEqualTo("SNA2003");
+        await Assert
+            .That(updated.GeneratedTrees)
+            .IsEmpty();
+    }
+
+    [Test]
+    [Arguments("a/parent.asyncapi.json", "b/child.asyncapi.json")]
+    [Arguments("b/parent.asyncapi.json", "a/child.asyncapi.json")]
+    public async Task ReportsGeneratedTypeAndNamespaceConflictsInBothOrders(string parentPath, string childPath)
+    {
+        const string json = """
+            {"asyncapi":"3.1.0","info":{"title":"Orders","version":"1"},
+             "channels":{"orders":{}},"operations":{"send":{"action":"send","channel":{"$ref":"#/channels/orders"}}}}
+            """;
+        var generator = new ClientGenerator();
+        var driver = CSharpGeneratorDriver.Create(
+            [generator.AsSourceGenerator()],
+            [new ContractFile(parentPath, json), new ContractFile(childPath, json)],
+            optionsProvider: new NamespaceOptionsProvider(parentPath, childPath));
+        var compilation = CSharpCompilation.Create("Consumer");
+        var result = driver
+            .RunGenerators(compilation)
+            .GetRunResult();
+
+        await Assert
+            .That(result.Diagnostics.Single().Id)
+            .IsEqualTo("SNA2003");
+        await Assert
+            .That(result.Diagnostics.Single().Location.GetLineSpan().Path)
+            .IsEqualTo(string.CompareOrdinal(parentPath, childPath) < 0 ? childPath : parentPath);
+    }
+
+    [Test]
     [Arguments("{\"type\":[\"string\",\"integer\"]}", "SNA2002")]
     [Arguments("{\"$ref\":\"external.json#/example\"}", "SNA2002")]
     [Arguments("{\"$ref\":\"#/missing\"}", "SNA2001")]

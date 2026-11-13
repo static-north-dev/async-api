@@ -3,5 +3,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'" />
     <Compile Include="$(MSBuildThisFileDirectory)AsyncApiEndpointExtensions.cs"
              Link="AsyncApiEndpointExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AsyncApiDocumentSnapshot.cs"
+             Link="AsyncApiDocumentSnapshot.cs" />
   </ItemGroup>
 </Project>

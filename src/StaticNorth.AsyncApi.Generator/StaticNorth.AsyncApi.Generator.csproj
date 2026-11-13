@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <None Include="Hosting/AsyncApiEndpointExtensions.cs" Pack="true" PackagePath="buildTransitive/AsyncApiEndpointExtensions.cs" />
+    <None Include="Hosting/AsyncApiDocumentSnapshot.cs" Pack="true" PackagePath="buildTransitive/AsyncApiDocumentSnapshot.cs" />
     <None Include="Hosting/StaticNorth.AsyncApi.Generator.targets" Pack="true" PackagePath="buildTransitive/StaticNorth.AsyncApi.Generator.targets" />
   </ItemGroup>
 

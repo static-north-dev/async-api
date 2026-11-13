@@ -164,9 +164,21 @@ var host = WebApplication.CreateBuilder(args);
 host.Services.AddAsyncApi(_ => new AsyncApiDocumentBuilder(info => info.Info("Packed", "1.0.0")));
 var app = host.Build();
 app.MapAsyncApi().RequireAuthorization("InternalApi");
+var snapshot = new AsyncApiDocumentSnapshot(new AsyncApiDocumentBuilder(info => info.Info("Original", "1.0.0")).Build());
+app.MapAsyncApiSnapshot(snapshot, "/snapshot.json").RequireAuthorization("InternalApi");
+var before = snapshot.GetResponse();
+snapshot.Update(new AsyncApiDocumentBuilder(info => info.Info("Updated", "1.0.0")).Build());
+var after = snapshot.GetResponse();
+if (ReferenceEquals(before, after) || !ReferenceEquals(after, snapshot.GetResponse()) ||
+    StaticNorth.AsyncApi.Core.AsyncApiJson.Read(before.FileContents).Info.Title != "Original" ||
+    StaticNorth.AsyncApi.Core.AsyncApiJson.Read(after.FileContents).Info.Title != "Updated")
+{
+    throw new System.InvalidOperationException("The cached response did not update atomically.");
+}
 `);
         dotnet(directory, 'restore', project, '--source', feed, '--packages', cache);
         dotnet(directory, 'build', project, '--no-restore', '--disable-build-servers');
+        dotnet(directory, 'bin/Debug/net11.0/Smoke.dll');
     }
 
     if (clientOnly || combined) {

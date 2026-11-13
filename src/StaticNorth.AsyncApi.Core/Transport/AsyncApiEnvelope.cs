@@ -9,10 +9,20 @@ public sealed class AsyncApiEnvelope
         ReadOnlyMemory<byte> payload,
         IReadOnlyDictionary<string, string>? headers = null,
         string? correlationId = null)
+        : this(route, payload, headers, correlationId, takeOwnership: false)
+    {
+    }
+
+    private AsyncApiEnvelope(
+        AsyncApiMessageRoute route,
+        ReadOnlyMemory<byte> payload,
+        IReadOnlyDictionary<string, string>? headers,
+        string? correlationId,
+        bool takeOwnership)
     {
         ArgumentNullException.ThrowIfNull(route);
         Route = route;
-        Payload = payload.ToArray();
+        Payload = takeOwnership ? payload : payload.ToArray();
         Headers = headers?.ToFrozenDictionary(StringComparer.Ordinal) ?? FrozenDictionary<string, string>.Empty;
         CorrelationId = correlationId;
     }
@@ -21,4 +31,10 @@ public sealed class AsyncApiEnvelope
     public ReadOnlyMemory<byte> Payload { get; }
     public IReadOnlyDictionary<string, string> Headers { get; }
     public string? CorrelationId { get; }
+
+    // The caller transfers exclusive ownership of the array for the lifetime of the envelope.
+    internal static AsyncApiEnvelope FromOwnedPayload(AsyncApiMessageRoute route, byte[] payload)
+    {
+        return new AsyncApiEnvelope(route, payload, null, null, takeOwnership: true);
+    }
 }

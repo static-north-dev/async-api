@@ -5,6 +5,7 @@ namespace StaticNorth.AsyncApi.Client.Transport;
 
 public sealed class AsyncApiJsonClient
 {
+    private static readonly JsonSerializerOptions DefaultOptions = CreateDefaultOptions();
     private readonly IAsyncApiTransport _transport;
     private readonly JsonSerializerOptions _options;
 
@@ -13,7 +14,7 @@ public sealed class AsyncApiJsonClient
         ArgumentNullException.ThrowIfNull(transport);
         _transport = transport;
         _options = serializerOptions is null
-            ? new JsonSerializerOptions { RespectNullableAnnotations = true }
+            ? DefaultOptions
             : new JsonSerializerOptions(serializerOptions);
     }
 
@@ -40,13 +41,15 @@ public sealed class AsyncApiJsonClient
         }
 
         var payload = JsonSerializer.SerializeToUtf8Bytes(message, _options);
-        return _transport.PublishAsync(new AsyncApiEnvelope(route, payload), cancellationToken);
+        var envelope = AsyncApiEnvelope.FromOwnedPayload(route, payload);
+        return _transport.PublishAsync(envelope, cancellationToken);
     }
 
     public ValueTask PublishAsync(AsyncApiMessageRoute route, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return _transport.PublishAsync(new AsyncApiEnvelope(route, ReadOnlyMemory<byte>.Empty), cancellationToken);
+        ArgumentNullException.ThrowIfNull(route);
+        return _transport.PublishAsync(route.GetEmptyEnvelope(), cancellationToken);
     }
 
     public ValueTask<IAsyncDisposable> SubscribeAsync<T>(
@@ -109,5 +112,17 @@ public sealed class AsyncApiJsonClient
         var separator = contentType.IndexOf(';', StringComparison.Ordinal);
         var value = separator < 0 ? contentType.AsSpan() : contentType.AsSpan(0, separator);
         return value.Trim();
+    }
+
+    private static JsonSerializerOptions CreateDefaultOptions()
+    {
+        var options = new JsonSerializerOptions { RespectNullableAnnotations = true };
+
+        if (JsonSerializer.IsReflectionEnabledByDefault)
+        {
+            options.MakeReadOnly(populateMissingResolver: true);
+        }
+
+        return options;
     }
 }

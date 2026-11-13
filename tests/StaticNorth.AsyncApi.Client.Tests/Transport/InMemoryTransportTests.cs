@@ -106,6 +106,44 @@ public sealed class InMemoryTransportTests
     }
 
     [Test]
+    public async Task SubscriptionChangesAffectOnlyFuturePublishes()
+    {
+        var transport = new InMemoryAsyncApiTransport();
+        var envelope = new AsyncApiEnvelope(Route, ReadOnlyMemory<byte>.Empty);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deliveries = new List<int>();
+        await using var first = await transport.SubscribeAsync(Route, async (_, token) =>
+        {
+            deliveries.Add(1);
+            started.TrySetResult();
+            await resume.Task.WaitAsync(token);
+        });
+        await using var second = await transport.SubscribeAsync(Route, (_, _) =>
+        {
+            deliveries.Add(2);
+            return ValueTask.CompletedTask;
+        });
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var pending = transport.PublishAsync(envelope, timeout.Token);
+        await started.Task.WaitAsync(timeout.Token);
+        await second.DisposeAsync();
+        await using var third = await transport.SubscribeAsync(Route, (_, _) =>
+        {
+            deliveries.Add(3);
+            return ValueTask.CompletedTask;
+        });
+        resume.SetResult();
+        await pending;
+        await transport.PublishAsync(envelope, timeout.Token);
+
+        await Assert
+            .That(deliveries.SequenceEqual([1, 2, 1, 3]))
+            .IsTrue();
+    }
+
+    [Test]
     public async Task PayloadlessMessagesDeliverEmptyBytes()
     {
         var transport = new InMemoryAsyncApiTransport();
@@ -129,5 +167,31 @@ public sealed class InMemoryTransportTests
         await Assert
             .That(deliveries)
             .IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task PayloadlessPublishesReuseTheEnvelopeForTheSameRoute()
+    {
+        var transport = new InMemoryAsyncApiTransport();
+        var client = new AsyncApiJsonClient(transport);
+        var envelopes = new List<AsyncApiEnvelope>();
+        await using var subscription = await transport.SubscribeAsync(Route, (envelope, _) =>
+        {
+            envelopes.Add(envelope);
+            return ValueTask.CompletedTask;
+        });
+
+        await client.PublishAsync(Route, default);
+        await client.PublishAsync(Route, default);
+        var otherRoute = new AsyncApiMessageRoute(Route.ChannelAddress, Route.MessageKey, "other", "application/json");
+        await client.PublishAsync(otherRoute, default);
+
+        await Assert
+            .That(envelopes.Count == 3 &&
+                ReferenceEquals(envelopes[0], envelopes[1]) &&
+                ReferenceEquals(envelopes[0].Route, Route) &&
+                ReferenceEquals(envelopes[2].Route, otherRoute) &&
+                envelopes.TrueForAll(static envelope => envelope.Payload.IsEmpty))
+            .IsTrue();
     }
 }
