@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using StaticNorth.AsyncApi.Generator.SourceGeneration;
+using StaticNorth.AsyncApi.Tests;
 
 namespace StaticNorth.AsyncApi.Generator.Tests;
 
@@ -28,7 +28,7 @@ public sealed class ProducerGeneratorTests
             }
             """;
         var compilation = CreateCompilation(declarations);
-        var generator = new ProducerGenerator();
+        var generator = GeneratorTestAssembly.Create("ProducerGenerator");
         var driver = CSharpGeneratorDriver.Create(generator.AsSourceGenerator());
         driver = (CSharpGeneratorDriver)driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out _);
         var result = driver.GetRunResult();
@@ -64,7 +64,7 @@ public sealed class ProducerGeneratorTests
             }
             {{declaration}}
             """);
-        var generator = new ProducerGenerator();
+        var generator = GeneratorTestAssembly.Create("ProducerGenerator");
         var driver = CSharpGeneratorDriver.Create(generator.AsSourceGenerator());
         var result = driver
             .RunGenerators(compilation)
@@ -86,7 +86,7 @@ public sealed class ProducerGeneratorTests
     public async Task RunsAgainstAnUnconfiguredCompilation()
     {
         var compilation = CSharpCompilation.Create("Producer");
-        var generator = new ProducerGenerator();
+        var generator = GeneratorTestAssembly.Create("ProducerGenerator");
         var driver = CSharpGeneratorDriver.Create(generator.AsSourceGenerator());
         var result = driver
             .RunGenerators(compilation)

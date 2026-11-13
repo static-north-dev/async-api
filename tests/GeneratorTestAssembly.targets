@@ -1,0 +1,19 @@
+<Project>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GeneratorTests/GeneratorTestAssembly.cs" Link="GeneratorTestAssembly.cs" />
+  </ItemGroup>
+
+  <!-- Load the analyzer by path in the tests so IDEs only need to resolve the Roslyn interfaces. -->
+  <Target Name="CopyGeneratorTestAssembly" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(DesignTimeBuild)' != 'true'">
+    <MSBuild Projects="@(ProjectReference->WithMetadataValue('Filename', 'StaticNorth.AsyncApi.Generator'))"
+             Targets="Build" Properties="TargetFramework=netstandard2.0;Configuration=$(Configuration)"
+             Condition="'$(BuildProjectReferences)' == 'true'" />
+    <MSBuild Projects="@(ProjectReference->WithMetadataValue('Filename', 'StaticNorth.AsyncApi.Generator'))"
+             Targets="GetTargetPath" Properties="TargetFramework=netstandard2.0;Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="GeneratorTestAssemblySource" />
+    </MSBuild>
+    <Copy SourceFiles="@(GeneratorTestAssemblySource)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
+</Project>

@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using StaticNorth.AsyncApi.Generator.SourceGeneration;
+using StaticNorth.AsyncApi.Tests;
 
 namespace StaticNorth.AsyncApi.Client.Tests;
 
@@ -74,7 +74,7 @@ public sealed class ClientGeneratorTests
              "channels":{"orders":{}},"operations":{"send":{"action":"send","channel":{"$ref":"#/channels/orders"}}}}
             """;
         var compilation = CSharpCompilation.Create("Consumer");
-        var generator = new ClientGenerator();
+        var generator = GeneratorTestAssembly.Create("ClientGenerator");
         var driver = CSharpGeneratorDriver.Create(
             [generator.AsSourceGenerator()],
             [new ContractFile("orders.asyncapi.json", json)],
@@ -112,7 +112,7 @@ public sealed class ClientGeneratorTests
             {"asyncapi":"3.1.0","info":{"title":"Orders","version":"1"},
              "channels":{"orders":{}},"operations":{"send":{"action":"send","channel":{"$ref":"#/channels/orders"}}}}
             """;
-        var generator = new ClientGenerator();
+        var generator = GeneratorTestAssembly.Create("ClientGenerator");
         var driver = CSharpGeneratorDriver.Create(
             [generator.AsSourceGenerator()],
             [new ContractFile(parentPath, json), new ContractFile(childPath, json)],
@@ -212,7 +212,7 @@ public sealed class ClientGeneratorTests
     public async Task RunsAgainstACompilationWithoutAdditionalFiles()
     {
         var compilation = CSharpCompilation.Create("Consumer");
-        var generator = new ClientGenerator();
+        var generator = GeneratorTestAssembly.Create("ClientGenerator");
         var driver = CSharpGeneratorDriver.Create(generator.AsSourceGenerator());
         var result = driver
             .RunGenerators(compilation)
@@ -239,7 +239,7 @@ public sealed class ClientGeneratorTests
             .Select(path => MetadataReference.CreateFromFile(path));
         var compilation = CSharpCompilation.Create(
             "Consumer", references: references, options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        var generator = new ClientGenerator();
+        var generator = GeneratorTestAssembly.Create("ClientGenerator");
         var driver = CSharpGeneratorDriver.Create([generator.AsSourceGenerator()], files);
 
         return driver

@@ -10,6 +10,8 @@
     <PackageReference Include="TUnit" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Client/StaticNorth.AsyncApi.Client.csproj" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
-                      SetTargetFramework="TargetFramework=netstandard2.0" />
+                      SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Import Project="../GeneratorTestAssembly.targets" />
 </Project>
