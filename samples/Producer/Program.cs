@@ -1,11 +1,24 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
+using Producer;
 using StaticNorth.AsyncApi.Core;
 using StaticNorth.AsyncApi.Generated;
 using StaticNorth.AsyncApi.Generator;
 
+if (args.Length == 1 && args[0] == "payload")
+{
+    var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    using (var output = Console.OpenStandardOutput())
+    {
+        await JsonSerializer.SerializeAsync(output, OrderCreated.Example(), options);
+    }
+
+    return 0;
+}
+
 if (args.Length != 1 || args[0] != "export")
 {
-    Console.Error.WriteLine("Usage: Producer export");
+    Console.Error.WriteLine("Usage: Producer <export|payload>");
     return 1;
 }
 

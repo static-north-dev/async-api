@@ -37,10 +37,16 @@ Reference `StaticNorth.AsyncApi.Client` in a .NET 11 project and add a local `*.
 </ItemGroup>
 ```
 
-For the Orders contract, `Orders.Contracts` contains `OrderCreated`, `IPublishOrderCreatedSubscriber`, and `PublishOrderCreatedMetadata`. A documented `send` gives the client a subscriber interface. A documented `receive` gives the client a publisher interface. The metadata preserves the operation ID, channel ID and address, message keys, content types, and JSON bindings. M4 covers transport adapters and implementation of those interfaces.
+For the Orders contract, `Orders.Contracts` contains `OrderCreated`, `IPublishOrderCreatedSubscriber`, `PublishOrderCreatedSubscriber`, and `PublishOrderCreatedMetadata`. A documented `send` gives the client a subscriber. A documented `receive` gives the client a publisher. The metadata preserves the operation ID, channel ID and address, message keys, content types, and JSON bindings.
 
 Omit `AsyncApiNamespace` to generate under `AsyncApi.Generated.<document name>`. `AsyncApiAlias` replaces the filename in that default namespace. `AsyncApiModelPrefix` prefixes generated DTO names. `AsyncApiGenerate` accepts `both` (the default), `publishers`, or `subscribers`.
 
 Run the checked-in example with `dotnet run --no-build --project samples/Consumer`. To use your own producer document, export it to a local file and use that file in `AdditionalFiles`. The generator supports AsyncAPI 3.1.0 JSON and local JSON Pointers. See the [client coverage and limits](docs/standards-coverage.md) for supported payloads and diagnostics.
+
+## Connect a generated client to a transport
+
+Pass an `IAsyncApiTransport` implementation to the generated client. For example, `new PublishOrderCreatedSubscriber(transport)` uses the fixed channel address in the checked-in Orders contract. Pass a concrete address as the second argument when the contract declares an address template or leaves the address unspecified. Keep the handle returned by `SubscribeOrderCreatedAsync` and dispose it to unsubscribe.
+
+Use `InMemoryAsyncApiTransport` for local examples and tests. It matches the channel address and message key using ordinal comparison and awaits the matching handlers. Producer code can publish an `AsyncApiEnvelope` containing UTF-8 JSON bytes, an explicit route, headers, and a correlation ID. The generated subscriber deserializes the bytes before calling the handler. See the [transport contract](docs/architecture.md#transport-boundary) for lifetime and error behavior.
 
 [Architecture decision](docs/architecture.md) · [Standards coverage and limits](docs/standards-coverage.md) · [Changelog](CHANGELOG.md) · [Apache-2.0 license](LICENSE)

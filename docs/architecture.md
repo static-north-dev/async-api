@@ -1,6 +1,6 @@
 # ADR 0001 — AsyncAPI document generation and export
 
-Accepted for M1, M2, and M3.
+Accepted through M4.
 
 ## Packages and compatibility
 
@@ -45,6 +45,14 @@ An ASP.NET Core host can opt in to `MapAsyncApi`, with `/asyncapi.json` as the d
 
 The Client generator reads local `*.asyncapi.json` documents from `AdditionalFiles`. The Generator project's compiler target runs in the .NET 11 SDK host and uses its `System.Text.Json` runtime. The Client package exposes compiler-visible metadata for per-file settings. It supplies the same analyzer as the Generator package, and the analyzer loads once when both packages are present.
 
-A documented `send` produces a subscriber contract with a `ValueTask<IAsyncDisposable>` subscription handle. A documented `receive` produces a publisher contract with a `ValueTask` method. Each method takes an optional cancellation token. Operation metadata preserves the original AsyncAPI routing keys and binding JSON. Transport adapters, delivery semantics, and remote acquisition belong to later phases.
+A documented `send` produces a subscriber contract with a `ValueTask<IAsyncDisposable>` subscription handle. A documented `receive` produces a publisher contract with a `ValueTask` method. Each method takes an optional cancellation token. Operation metadata preserves the original AsyncAPI routing keys and binding JSON. When Client is referenced, the generator also emits concrete implementations that delegate to the supplied transport.
 
 `SNA2001` identifies invalid documents, `SNA2002` identifies unsupported constructs, and `SNA2003` identifies conflicts between generated or existing symbols. Diagnostics identify the input file and include the relevant JSON path for contract errors.
+
+## Transport boundary
+
+`IAsyncApiTransport` in Core publishes envelopes and returns an async disposable handle for subscriptions. Both operations carry an `AsyncApiMessageRoute` with a concrete channel address, channel-local message key, operation ID, content type, and optional binding JSON. Envelope construction snapshots payload bytes and headers. Adapters and handlers treat the envelope as read-only. The generated typed interfaces expose the payload and cancellation token. Code that needs headers or correlation IDs can use the envelope API directly.
+
+Generated clients serialize and deserialize JSON using a copy of the supplied serializer options. They compare media types case-insensitively and ignore media type parameters. A malformed payload, mismatched media type, or unexpected null fails delivery before the typed handler runs. A message without a payload uses zero bytes. The caller supplies the concrete address for templates and unspecified addresses.
+
+The in-memory adapter routes by ordinal channel address and message key. It takes a snapshot of matching subscriptions for each publish and invokes their handlers sequentially outside its lock. Disposing a handle removes it from future snapshots. A delivery in a snapshot already taken can still run. Cancellation during subscription applies to registration, and publish cancellation is forwarded to handlers and stops further dispatch. Unless the publish is canceled, a handler failure allows the remaining handlers to run before the publish reports the original exception or an aggregate. Concurrent publishes can invoke the same handler concurrently. The adapter delivers only to active subscriptions in the same instance and provides no persistence, retry, or acknowledgement guarantees.

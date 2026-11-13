@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — M4 transport
+
+- Added the transport interface, message route, and envelope in Core.
+- Generated JSON publisher and subscriber implementations backed by a supplied transport.
+- Added an in-memory transport and verified that producer-serialized Orders reach a generated subscriber using the packed Client package.
+
 ## Unreleased — M3 client
 
 - Generate DTOs, publisher and subscriber interfaces, and binding metadata from local AsyncAPI 3.1.0 JSON contracts.

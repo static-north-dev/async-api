@@ -8,14 +8,7 @@ internal sealed class OrderCreatedDefinition : IAsyncApiMessageDefinition<OrderC
 {
     public void Configure(IMessageBuilder<OrderCreated> message)
     {
-        var payload = new OrderCreated(
-            Guid.Empty,
-            DateTimeOffset.UnixEpoch,
-            OrderStatus.Created,
-            [new OrderItem("ABC-123", 12.50m)])
-        {
-            Source = "checkout"
-        };
+        var payload = OrderCreated.Example();
 
         message
             .Id("OrderCreated")

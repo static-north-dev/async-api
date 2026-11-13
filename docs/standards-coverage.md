@@ -1,11 +1,11 @@
 # AsyncAPI standards coverage
 
-M3 adds client generation to code-first authoring and JSON export for AsyncAPI 3.1.0.
+M4 adds in-process delivery through generated clients to the AsyncAPI 3.1.0 producer and consumer workflows.
 
 | Spec feature | Core model | Fluent builder | C# schema inference | Client codegen | Tests | Known limits |
 | --- | --- | --- | --- | --- | --- | --- |
 | Root version, `info.title`, `info.version`, tags and servers | Typed info and named JSON sections | Supported | — | — | Required fields, version rejection, official parser on producer export | UTF-8 JSON, exact 3.1.0 |
-| Channels, parameters, operations and traits | Named JSON sections | Supported | — | Publisher/subscriber interfaces and channel metadata | Address validation, reference membership, both directions and packed client compilation | Parameter substitution, traits merge and request/reply are deferred |
+| Channels, parameters, operations and traits | Named JSON sections | Supported | — | Publisher/subscriber interfaces, transport implementations and channel metadata | Address validation, reference membership, both directions and delivery from producer bytes | The caller supplies concrete addresses. Traits merge and request/reply are deferred. |
 | Messages, headers, examples and correlation IDs | Preserved as JSON | Supported | Typed payload and header schemas | Payload DTOs, content types, message keys and raw headers metadata | Producer export, duplicate IDs, packed client deserialization | Typed headers and correlation handling are deferred |
 | Payload Schema Object and local `$ref` | Preserved as JSON | Inferred schema or explicit override | Requiredness, nullability, wire names, enums, collections and recursive objects | Objects, arrays, typed dictionaries, scalar types, string enums, nullable types and recursive object references | Official parser, generated compilation, invalid schemas and Orders round trip | Complex unions, boolean schemas and unsupported shape-changing keywords emit diagnostics |
 | Extensions, security schemes and protocol bindings | Preserved as JSON | Extension methods and explicit JSON objects | — | Raw channel, operation and message bindings | Round-trip fixture and binding metadata compilation | Protocol semantics and security execution are deferred |

@@ -15,11 +15,20 @@ public sealed class ClientGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        var clientAvailable = context
+            .CompilationProvider
+            .Select(static (compilation, _) =>
+                compilation.GetTypeByMetadataName("StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient") is not null);
         var documents = context
             .AdditionalTextsProvider
             .Where(static file => file.Path.EndsWith(".asyncapi.json", StringComparison.OrdinalIgnoreCase))
             .Combine(context.AnalyzerConfigOptionsProvider)
-            .Select(static (pair, cancellationToken) => Generate(pair.Left, pair.Right.GetOptions(pair.Left), cancellationToken));
+            .Combine(clientAvailable)
+            .Select(static (pair, cancellationToken) =>
+            {
+                var (file, configuration) = pair.Left;
+                return Generate(file, configuration.GetOptions(file), pair.Right, cancellationToken);
+            });
 
         var compilationDocuments = documents
             .Collect()
@@ -59,7 +68,11 @@ public sealed class ClientGenerator : IIncrementalGenerator
         });
     }
 
-    private static ClientOutput Generate(AdditionalText file, AnalyzerConfigOptions configuration, CancellationToken cancellationToken)
+    private static ClientOutput Generate(
+        AdditionalText file,
+        AnalyzerConfigOptions configuration,
+        bool clientAvailable,
+        CancellationToken cancellationToken)
     {
         var location = Location.Create(file.Path, new TextSpan(0, 0), new LinePositionSpan(default, default));
 
@@ -86,7 +99,7 @@ public sealed class ClientGenerator : IIncrementalGenerator
                 info
                     .Field("version")
                     .String();
-                var emitter = new ClientContractEmitter(root, options);
+                var emitter = new ClientContractEmitter(root, options, clientAvailable);
                 var (source, symbols) = emitter.Write(cancellationToken);
                 var qualified = symbols
                     .Select(symbol => options.Namespace + "." + symbol)

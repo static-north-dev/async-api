@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace StaticNorth.AsyncApi.Generator.SourceGeneration.Client;
 
-internal sealed class ClientContractEmitter(ContractNode root, ClientOptions options)
+internal sealed class ClientContractEmitter(ContractNode root, ClientOptions options, bool clientAvailable)
 {
     private readonly ContractReferences _references = new(root);
     private readonly HashSet<string> _symbols = new(StringComparer.Ordinal);
@@ -88,8 +88,15 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
         var direction = sending ? "Subscriber" : "Publisher";
         var interfaceName = $"I{stem}{direction}";
         var metadataName = stem + "Metadata";
+        var clientName = stem + direction;
         Reserve(operation, interfaceName);
         Reserve(operation, metadataName);
+
+        if (clientAvailable)
+        {
+            Reserve(operation, clientName);
+        }
+
         var address = channel.Field("address");
         var channelAddress = address.Exists && address.Kind != JsonValueKind.Null ? address.String() : null;
         var methods = new HashSet<string>(StringComparer.Ordinal) { interfaceName };
@@ -98,6 +105,7 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
             metadataName, "OperationId", "DocumentAction", "ChannelId", "ChannelAddress", "ChannelBindingsJson", "OperationBindingsJson"
         };
         var bindings = new StringBuilder();
+        var implementations = new StringBuilder();
         source.Append($"\npublic interface {interfaceName}\n{{\n");
 
         foreach (var (key, node) in selected)
@@ -124,16 +132,24 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
             var type = payload.Exists ? schemas.TypeOf(payload, options.ModelPrefix + ClientNames.Identifier(messageName)) : null;
             const string cancellation = "global::System.Threading.CancellationToken cancellationToken = default";
             var arguments = type is null ? "" : type + " message, ";
+            string signature;
 
             if (sending)
             {
                 var handlerArguments = type is null ? "" : type + ", ";
                 var handler = $"global::System.Func<{handlerArguments}global::System.Threading.CancellationToken, global::System.Threading.Tasks.ValueTask> handler";
-                source.Append($"    global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable> {method}({handler}, {cancellation});\n");
+                signature = $"global::System.Threading.Tasks.ValueTask<global::System.IAsyncDisposable> {method}({handler}, {cancellation})";
             }
             else
             {
-                source.Append($"    global::System.Threading.Tasks.ValueTask {method}({arguments}{cancellation});\n");
+                signature = $"global::System.Threading.Tasks.ValueTask {method}({arguments}{cancellation})";
+            }
+
+            source.Append($"    {signature};\n");
+
+            if (clientAvailable)
+            {
+                WriteImplementation(implementations, signature, sending, type, metadataName, suffix);
             }
 
             MessageConstant(bindings, metadata, node, suffix + "MessageKey", key);
@@ -152,6 +168,70 @@ internal sealed class ClientContractEmitter(ContractNode root, ClientOptions opt
         source
             .Append(bindings)
             .Append("}\n");
+
+        if (clientAvailable)
+        {
+            WriteClient(source, implementations, clientName, interfaceName, metadataName, channelAddress, methods.Count > 1);
+        }
+    }
+
+    private static void WriteImplementation(
+        StringBuilder source, string signature, bool sending, string? type, string metadata, string suffix)
+    {
+        var method = sending ? "SubscribeAsync" : "PublishAsync";
+        var arguments = sending ? "handler, " : "";
+
+        if (type is not null)
+        {
+            var allowsNull = type.EndsWith("?", StringComparison.Ordinal) ? "true" : "false";
+            method += $"<{type}>";
+            arguments = $"{(sending ? "handler" : "message")}, {allowsNull}, ";
+        }
+
+        source.Append($$"""
+
+                public {{signature}}
+                {
+                    var route = new global::StaticNorth.AsyncApi.Core.Transport.AsyncApiMessageRoute(
+                        _address,
+                        {{metadata}}.{{suffix}}MessageKey,
+                        {{metadata}}.OperationId,
+                        {{metadata}}.{{suffix}}ContentType,
+                        {{metadata}}.ChannelBindingsJson,
+                        {{metadata}}.OperationBindingsJson,
+                        {{metadata}}.{{suffix}}MessageBindingsJson);
+                    return _client.{{method}}(route, {{arguments}}cancellationToken);
+                }
+
+            """);
+    }
+
+    private static void WriteClient(
+        StringBuilder source, StringBuilder implementations, string name, string contract, string metadata, string? address, bool hasMessages)
+    {
+        source.Append($"\npublic sealed class {name} : {contract}\n{{\n");
+
+        if (hasMessages)
+        {
+            var defaultAddress = string.IsNullOrWhiteSpace(address) || address!.IndexOfAny(['{', '}']) >= 0 ? "" : " = null";
+            source.Append($$"""
+                    private readonly global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient _client;
+                    private readonly string _address;
+
+                    public {{name}}(
+                        global::StaticNorth.AsyncApi.Core.Transport.IAsyncApiTransport transport,
+                        string? channelAddress{{defaultAddress}},
+                        global::System.Text.Json.JsonSerializerOptions? serializerOptions = null)
+                    {
+                        _client = new global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient(transport, serializerOptions);
+                        _address = global::StaticNorth.AsyncApi.Client.Transport.AsyncApiJsonClient.ResolveAddress({{metadata}}.ChannelAddress, channelAddress);
+                    }
+
+                """);
+            source.Append(implementations);
+        }
+
+        source.Append("}\n");
     }
 
     private static IEnumerable<(string Name, ContractNode Node)> SelectMessages(

@@ -32,7 +32,7 @@ test('The producer exports a valid, deterministic AsyncAPI 3.1.0 document', asyn
     assert.equal(document.operations.publishOrderCreated.action, 'send');
     assert.equal(message.payload.$ref, '#/components/schemas/OrderCreated');
     assert.deepEqual(message.headers.required, ['X-Correlation-Id']);
-    assert.equal(message.examples[0].payload.order_id, '00000000-0000-0000-0000-000000000000');
+    assert.equal(message.examples[0].payload.order_id, 'dc572c8c-131a-40d5-8d37-091b02971883');
     assert.equal(schema.properties.order_id.format, 'uuid');
     assert.equal(schema.properties.createdAt.format, 'date-time');
     assert.deepEqual(schema.properties.status.enum, ['Created', 'Confirmed']);

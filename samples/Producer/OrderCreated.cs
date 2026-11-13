@@ -13,4 +13,16 @@ internal sealed record OrderCreated(
     public string InternalNote { get; init; } = "";
 
     public required string Source { get; init; }
+
+    internal static OrderCreated Example()
+    {
+        return new OrderCreated(
+            Guid.Parse("dc572c8c-131a-40d5-8d37-091b02971883"),
+            DateTimeOffset.UnixEpoch,
+            OrderStatus.Created,
+            [new OrderItem("ABC-123", 12.50m)])
+        {
+            Source = "checkout"
+        };
+    }
 }
