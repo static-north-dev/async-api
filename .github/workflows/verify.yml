@@ -27,6 +27,8 @@ jobs:
           node-version: 24
       - run: dotnet build StaticNorth.AsyncApi.slnx --configuration Release
       - run: dotnet format StaticNorth.AsyncApi.slnx --verify-no-changes --no-restore
+        env:
+          Configuration: Release
       - run: dotnet test --solution StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore
       - run: npm --prefix tests/compatibility ci --ignore-scripts
       - run: npm --prefix tests/compatibility test
