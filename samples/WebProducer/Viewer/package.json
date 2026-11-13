@@ -1,0 +1,7 @@
+{
+  "name": "staticnorth-asyncapi-viewer",
+  "private": true,
+  "dependencies": {
+    "@asyncapi/react-component": "3.2.3"
+  }
+}

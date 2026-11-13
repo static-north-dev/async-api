@@ -1,0 +1,22 @@
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+}
+
+#document-access {
+    max-width: 38rem;
+    margin: 3rem auto;
+    padding: 0 1rem;
+}
+
+#document-auth label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+#document-auth input,
+#document-auth button {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    font: inherit;
+}

@@ -22,5 +22,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app
     .MapAsyncApi(builder.Configuration["AsyncApi:Path"] ?? "/asyncapi.json")
+    .WithName(AsyncApiViewerEndpoints.DocumentEndpointName)
     .RequireAuthorization("InternalApi");
+app.MapAsyncApiViewer();
 await app.RunAsync();

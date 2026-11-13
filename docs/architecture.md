@@ -1,6 +1,6 @@
 # ADR 0001 — AsyncAPI document generation and export
 
-Accepted through M5.
+Accepted through M6.
 
 ## Packages and compatibility
 
@@ -40,6 +40,14 @@ Schema inference uses the .NET JSON Schema exporter. Defaults use camel case and
 An application can write `AsyncApiJson.Write(builder.Build())` to a file or stream. An explicit export command in the compiled host calls that same API in a separate process. Compilation performs discovery and registration generation only. An explicit export host is sufficient for M2. A reusable CLI remains a later developer experience decision.
 
 Setting `AsyncApiEnableAspNetCore` in a host project compiles the Generator package's endpoint extensions into that host. `AddAsyncApi` registers a scoped builder factory. `MapAsyncApi` maps `/asyncapi.json` by default and returns the native endpoint convention builder for host authorization and other metadata. Each request builds a fresh snapshot. The response disables caching and reports document configuration errors as a generic 500 problem response.
+
+### Optional documentation viewer
+
+The web sample uses the official [AsyncAPI React 3.2.3 standalone bundle](https://github.com/asyncapi/asyncapi-react/releases/tag/v3.2.3). It is Apache-2.0 and ships with React and the AsyncAPI parser. Chromium renders the generated AsyncAPI 3.1.0 Orders document, including its operation, message and payload example. The [AsyncAPI HTML template](https://github.com/asyncapi/html-template) also uses this component and is suited to prebuilt documentation snapshots. The standalone bundle lets the browser read the live contract directly from the host's authorized endpoint.
+
+The shipped JavaScript and stylesheet total about 2.93 MiB minified or 636 KiB when gzipped. These are file measurements. Actual transfer size depends on response compression. The sample embeds those assets, its viewer files, the upstream license and the bundle's third-party notices only when built with `AsyncApiEnableViewer=true`. Node and React stay in the sample tooling. The three NuGet projects build independently of the viewer.
+
+The public viewer shell contains the named JSON endpoint's path and loads its scripts locally. The browser uses same-origin requests, rejects redirects and asks for the sample bearer token on a `401` in a secure context such as HTTPS or loopback. ASP.NET Core continues to authorize the document. The renderer's Ajv validator compiles schemas at runtime and requires `unsafe-eval` in the viewer page's Content Security Policy. The page limits script and network sources to the host's origin, and its styles permit inline declarations used by the component. The sample renders producer-generated documents with local references.
 
 ## Consumer boundary
 

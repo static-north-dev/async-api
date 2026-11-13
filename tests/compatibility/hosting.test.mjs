@@ -43,6 +43,7 @@ test('The web producer uses the host policy on a custom route', { timeout: 30_00
         assert.equal(authenticated.headers.get('cache-control'), 'no-store');
         assert.equal((await authenticated.json()).components.messages['order.created'].name, 'order.created');
         assert.equal((await fetch(new URL('/asyncapi.json', address), { signal: AbortSignal.timeout(5000) })).status, 404);
+        assert.equal((await fetch(new URL('/asyncapi-ui', address), { signal: AbortSignal.timeout(5000) })).status, 404);
     } finally {
         child.kill();
         await closed;

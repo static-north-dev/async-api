@@ -30,6 +30,12 @@ jobs:
       - run: dotnet test --solution StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore
       - run: npm --prefix tests/compatibility ci --ignore-scripts
       - run: npm --prefix tests/compatibility test
+      - run: npm --prefix samples/WebProducer/Viewer ci --ignore-scripts
+      - run: npm --prefix tests/compatibility exec -- playwright install --with-deps --only-shell chromium
+      - run: dotnet publish samples/WebProducer --configuration Release --no-restore -p:AsyncApiEnableViewer=true --output '${{ runner.temp }}/asyncapi-viewer'
+      - run: npm --prefix tests/compatibility run test:viewer
+        env:
+          ASYNCAPI_WEB_PRODUCER_DLL: ${{ runner.temp }}/asyncapi-viewer/WebProducer.dll
       - run: dotnet pack StaticNorth.AsyncApi.slnx --configuration Release --no-build --no-restore --output artifacts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

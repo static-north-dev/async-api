@@ -61,6 +61,19 @@ app
 
 The [web sample](samples/WebProducer/Program.cs) shows generated definition registration and native ASP.NET Core authentication. It reads its demonstration bearer token from `ASYNCAPI_SPEC_TOKEN` and supports a custom route through `AsyncApi__Path`. The endpoint builds the document per request, responds with `application/json` and `Cache-Control: no-store`, and returns a generic 500 problem response for invalid document configuration.
 
+## View the contract in a browser
+
+Set `ASYNCAPI_SPEC_TOKEN` to a local demonstration token, then build and run the optional viewer in the web sample.
+
+```sh
+npm --prefix samples/WebProducer/Viewer ci --ignore-scripts
+dotnet run --project samples/WebProducer -p:AsyncApiEnableViewer=true -- --urls http://127.0.0.1:5080
+```
+
+Open [the local documentation page](http://127.0.0.1:5080/asyncapi-ui) and enter the token. The page loads the same JSON endpoint, including a route set through `AsyncApi__Path`, and ASP.NET Core applies `InternalApi` to each document request. The browser sends the token only to that endpoint and keeps it out of storage and the URL. The sample serves the renderer locally. Publish with `-p:AsyncApiEnableViewer=true` to embed its assets in the sample assembly.
+
+See the [renderer evaluation](docs/architecture.md#optional-documentation-viewer) for bundle sizes and the viewer's browser policy.
+
 ## Acquire a remote contract
 
 Run the fetch sample explicitly before building a client. Add the resulting local file to `AdditionalFiles`.

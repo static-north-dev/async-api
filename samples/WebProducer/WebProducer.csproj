@@ -5,9 +5,19 @@
     <AsyncApiEnableAspNetCore>true</AsyncApiEnableAspNetCore>
   </PropertyGroup>
   <ItemGroup>
+    <Content Update="Viewer/package*.json" CopyToPublishDirectory="Never" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj" />
     <ProjectReference Include="../../src/StaticNorth.AsyncApi.Generator/StaticNorth.AsyncApi.Generator.csproj"
                       SetTargetFramework="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(AsyncApiEnableViewer)' == 'true'">
+    <EmbeddedResource Include="Viewer/index.html" LogicalName="Viewer.index.html" />
+    <EmbeddedResource Include="Viewer/viewer.js" LogicalName="Viewer.viewer.js" />
+    <EmbeddedResource Include="Viewer/viewer.css" LogicalName="Viewer.viewer.css" />
+    <EmbeddedResource Include="Viewer/node_modules/@asyncapi/react-component/browser/standalone/index.js" LogicalName="Viewer.asyncapi.js" />
+    <EmbeddedResource Include="Viewer/node_modules/@asyncapi/react-component/browser/standalone/index.js.LICENSE.txt" LogicalName="Viewer.index.js.LICENSE.txt" />
+    <EmbeddedResource Include="Viewer/node_modules/@asyncapi/react-component/styles/default.min.css" LogicalName="Viewer.asyncapi.css" />
+    <EmbeddedResource Include="Viewer/node_modules/@asyncapi/react-component/LICENSE" LogicalName="Viewer.LICENSE.txt" />
   </ItemGroup>
   <Import Project="../../src/StaticNorth.AsyncApi.Generator/Hosting/StaticNorth.AsyncApi.Generator.targets" />
 </Project>

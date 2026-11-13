@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AsyncAPI documentation</title>
+    <link rel="stylesheet" href="__ASSETS_PATH__asyncapi.css">
+    <link rel="stylesheet" href="__ASSETS_PATH__viewer.css">
+    <script defer src="__ASSETS_PATH__asyncapi.js"></script>
+    <script defer src="__ASSETS_PATH__viewer.js"></script>
+</head>
+<body>
+    <main data-document-path="__DOCUMENT_PATH__">
+        <section id="document-access" aria-label="AsyncAPI documentation access">
+            <p id="document-status" role="status">Loading the AsyncAPI document…</p>
+            <form id="document-auth" hidden>
+                <label for="document-token">Bearer token</label>
+                <input id="document-token" type="password" autocomplete="off" required>
+                <button type="submit">View documentation</button>
+            </form>
+            <noscript>Enable JavaScript to view the AsyncAPI document.</noscript>
+        </section>
+        <div id="asyncapi-document"></div>
+    </main>
+</body>
+</html>

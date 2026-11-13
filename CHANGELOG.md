@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased — M6 documentation viewer
+
+- Added an opt-in, self-hosted AsyncAPI React viewer to the ASP.NET Core sample. It reads the live AsyncAPI 3.1.0 document through the host's existing authorization policy.
+
 ## Unreleased — M5 developer experience
 
 - Added opt-in ASP.NET Core document hosting with host authorization.
